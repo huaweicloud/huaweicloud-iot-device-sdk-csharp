@@ -24,7 +24,7 @@ namespace IoT.Device.Demo
         {
             this.device = device;
             this.otaService = device.otaService;
-            otaService.setOtaListener(this);
+            otaService.SetOtaListener(this);
             this.packageSavePath = packageSavePath;
             this.version = "v0.0.1"; // 修改为实际值
         }
@@ -50,7 +50,7 @@ namespace IoT.Device.Demo
 
         public void OnQueryVersion()
         {
-            otaService.reportVersion(version);
+            otaService.ReportVersion(version);
         }
 
         /// <summary>
@@ -118,7 +118,7 @@ namespace IoT.Device.Demo
 
             // 上报升级成功，注意版本号要携带更新后的版本号，否则平台会认为升级失败
             version = otaPackage.version;
-            otaService.reportOtaStatus(OTAService.OTA_CODE_SUCCESS, 100, version, "upgrade success");
+            otaService.ReportOtaStatus(OTAService.OTA_CODE_SUCCESS, 100, version, "upgrade success");
             Log.Info("ota upgrade ok");
         }
 
@@ -177,18 +177,18 @@ namespace IoT.Device.Demo
                     string strSHA256 = IotUtil.GetSHA256HashFromFile(packageSavePath);
                     Log.Info("SHA256 = " + strSHA256);
 
-                    otaService.reportOtaStatus(OTAService.OTA_CODE_SUCCESS, 100, version, null);
+                    otaService.ReportOtaStatus(OTAService.OTA_CODE_SUCCESS, 100, version, null);
                     OnUpgradeSuccess(strSHA256);
                 }
             }
             catch (WebException exp)
             {
-                otaService.reportOtaStatus(OTAService.OTA_CODE_DOWNLOAD_TIMEOUT, 0, version, exp.Message);
+                otaService.ReportOtaStatus(OTAService.OTA_CODE_DOWNLOAD_TIMEOUT, 0, version, exp.Message);
                 OnUpgradeFailure();
             }
             catch (Exception ex)
             {
-                otaService.reportOtaStatus(OTAService.OTA_CODE_INNER_ERROR, 0, version, ex.Message);
+                otaService.ReportOtaStatus(OTAService.OTA_CODE_INNER_ERROR, 0, version, ex.Message);
                 OnUpgradeFailure();
             }
         }

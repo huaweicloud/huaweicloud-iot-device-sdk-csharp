@@ -1,9 +1,47 @@
-# iot-device-sdk-cSharp
+# iot-device-sdk-cSharp开发指南
 # 目录
-# 版本说明
-# 前言
+
+<!-- TOC -->
+
+- [修订记录](#0)
+
+- [前言](#1)
+
+- [SDK简介](#2)
+
+- [准备工作](#3)
+
+- [上传产品模型并注册设备](#4)
+
+- [设备初始化](#5)
+
+- [属性上报](#6)
+
+- [消息上报](#7)
+
+- [属性读写](#8)
+
+- [命令下发](#9)
+
+- [设备影子](#10)
+
+- [OTA升级](#11)
+
+- [设备事件同步](#12)
+
+- [开源协议](#13)
+
+  <!-- /TOC -->
+
+<h1 id="0">修订记录</h1>
+
++ 文档版本01 第一次正式发布（2020-08-24）
+
+<h1 id="1">前言</h1>
+
 本文通过实例讲述iot-device-sdk-cSharp（以下简称SDK）帮助设备用MQTT协议快速连接到华为物联网平台。
-# SDK简介
+<h1 id="2">SDK简介</h1>
+
 SDK面向运算、存储能力较强的嵌入式终端设备，开发者通过调用SDK接口，便可实现设备与物联网平台的上下行通讯。SDK当前支持的功能有：
 *  支持设备消息、属性上报、属性读写、命令下发
 *  支持OTA升级
@@ -31,51 +69,51 @@ Newtonsoft.Json：v12.0.3
 
 NLog：v4.7
 
-# 准备工作
+<h1 id="3">准备工作</h1>
 
 *  已安装Microsoft Visual Studio 2017
 
 *  .NET Framework 版本：4.5.2
 
-# 上传产品模型并注册设备
+<h1 id="4">上传产品模型并注册设备</h1>
 
 为了方便体验，我们提供了一个烟感的产品模型，烟感会上报烟雾值、温度、湿度、烟雾报警、还支持响铃报警命令。以烟感例，体验消息上报、属性上报等功能。
 
 1. 访问[设备接入服务](https://www.huaweicloud.com/product/iothub.html)，单击“立即使用”进入设备接入控制台。
 
-3. 访问管理控制台，查看MQTTS设备接入地址，保存该地址。![](D:\LFD\HUAWEI\Code\Gitlab\C# SDK\iot-device-sdk-cSharp\doc\upload_profile_1.png)
+3. 访问管理控制台，查看MQTTS设备接入地址，保存该地址。![](./doc/upload_profile_1.png)
 
 4. 在设备接入控制台选择“产品”，单击右上角的“创建产品”，在弹出的页面中，填写“产品名称”、“协议类型”、“数据格式”、“厂商名称”、“所属行业”、“设备类型”等信息，然后点击右下角“立即创建”。
 
    - 协议类型选择“MQTT”；
 
-   - 数据格式选择“JSON”。![](D:\LFD\HUAWEI\Code\Gitlab\C# SDK\iot-device-sdk-cSharp\doc\upload_profile_2.png)
+   - 数据格式选择“JSON”。![](./doc/upload_profile_2.png)
 
 5. 产品创建成功后，单击“详情”进入产品详情，在功能定义页面，单击“上传模型文件”，上传烟感产品模型[smokeDetector](https://support.huaweicloud.com/devg-iothub/resource/smokeDetector_cb097d20d77b4240adf1f33d36b3c278_smokeDetector.zip)。
 
-6. 在左侧导航栏，选择“ 设备 > 所有设备”，单击右上角“注册设备”，在弹出的页面中，填写注册设备参数，然后单击“确定”。![](D:\LFD\HUAWEI\Code\Gitlab\C# SDK\iot-device-sdk-cSharp\doc\upload_profile_3.png)
+6. 在左侧导航栏，选择“ 设备 > 所有设备”，单击右上角“注册设备”，在弹出的页面中，填写注册设备参数，然后单击“确定”。![](./doc/upload_profile_3.png)
 
 7. 设备注册成功后保存设备标识码、设备ID、密钥。
 
-# 设备初始化
+<h1 id="5">设备初始化</h1>
 
 1. 创建设备。
 
    设备接入平台时，物联网平台提供密钥和证书两种鉴权方式。
-*  如果您使用1883端口接入平台，需要写入获取的设备ID、密钥。
+* 如果您使用1883端口接入平台，需要写入获取的设备ID、密钥。
 
    ```c#
-IoTDevice device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 1883, "5eb4cd4049a5ab087d7d4861_demo", "secret");
+   IoTDevice device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 1883, "5eb4cd4049a5ab087d7d4861_demo", "secret");
    ```
-   
+
    如果使用8883端口接入，需要把平台证书（DigiCertGlobalRootCA.crt.pem）放在根目录，并写入获取的设备ID、密钥。
 
    ```c#
-IoTDevice device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 8883, "5eb4cd4049a5ab087d7d4861_demo", "secret");
+   IoTDevice device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 8883, "5eb4cd4049a5ab087d7d4861_demo", "secret");
    ```
    **注：为安全起见，推荐使用8883端口接入平台。**
 
-*  证书模式接入。
+* 证书模式接入。
 
    华为物联网平台支持设备使用自己的X.509证书接入鉴权。在SDK中使用X.509证书接入时，需自行制作设备证书，并放到调用程序根目录下。SDK调用证书的根目录为\iot-device-feature-test\bin\Debug\certificate。
 
@@ -120,7 +158,7 @@ IoTDevice device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 8883,
 
 4. 连接成功后，设备和平台之间开始通讯。调用IoT Device 的GetClient接口获取设备客户端，客户端提供了消息、属性、命令等通讯接口。
 
-# 属性上报
+<h1 id="6">属性上报</h1>
 
 打开PropertySample类，这个例子中会上报alarm、temperature、humidity、smokeConcentration这四个属性。
 
@@ -169,7 +207,7 @@ public void OnMessageUnPublished(RawMessage message)
 ```
 修改PropertySample的FunPropertySample函数后直接运行iot-device-feature-test工程，调用FunPropertySample函数上报属性。
 
-# 消息上报
+<h1 id="7">消息上报</h1>
 
 消息上报是指设备向平台上报消息，本例还包含自定义Topic消息上报，以及自定义Topic命令下发功能。
 
@@ -223,11 +261,11 @@ public void OnMessageUnPublished(RawMessage message)
 
 4. 修改MessageSample类的FunMessageSample函数，替换自己的设备参数后启动iot-device-feature-test工程调用MessageSample类。
 
-5. 在设备接入控制台，选择“设备 > 所有设备”查看设备是否在线。![](D:\LFD\HUAWEI\Code\Gitlab\C# SDK\iot-device-sdk-cSharp\doc\upload_profile_4.png)
+5. 在设备接入控制台，选择“设备 > 所有设备”查看设备是否在线。![](./doc/upload_profile_4.png)
 
-6. 平台收到设备上报的消息。![](D:\LFD\HUAWEI\Code\Gitlab\C# SDK\iot-device-sdk-cSharp\doc\upload_profile_5.png)
+6. 平台收到设备上报的消息。![](./doc/upload_profile_5.png)
 
-# 属性读写
+<h1 id="8">属性读写</h1>
 
 调用客户端的propertyListener方法来设置属性回调接口。在PropertiesGetAndSetSample这个例子中，我们实现了属性读写接口。
 
@@ -288,7 +326,7 @@ public void OnPropertiesGet(string requestId, string serviceId)
     device.GetClient().Report(new PubMessage(CommonTopic.TOPIC_SYS_PROPERTIES_GET_RESPONSE + "=" + requestId, properties));
 }
 ```
-# 命令下发
+<h1 id="9">命令下发</h1>
 
 设置命令监听器用来接收平台下发的命令，在回调接口里，需要对命令进行处理，并上报响应。
 
@@ -325,7 +363,7 @@ dic.Add("result", "success");
 	device.GetClient().Report(new PubMessage(requestId, new CommandRsp(0, dic)));
 }
 ```
-# 设备影子
+<h1 id="10">设备影子</h1>
 
 1. 设备请求获取平台的设备影子数据，用于设备向平台获取设备影子数据。
 
@@ -351,11 +389,11 @@ dic.Add("result", "success");
    }
    ```
 
-# OTA升级
+<h1 id="11">OTA升级</h1>
 
-1. 软件升级。参考<a href=" https://support.huaweicloud.com/usermanual-iothub/iot_01_0047.html#section3 " target="_blank">软件升级指导</a>检查软件升级能力并上传软件包。
+1. 软件升级。参考<a href=" https://support.huaweicloud.com/usermanual-iothub/iot_01_0047.html#section3 " target="_blank">软件升级指导</a>上传软件包。
 
-2. 固件升级。参考<a href=" https://support.huaweicloud.com/usermanual-iothub/iot_01_0027.html#section3 " target="_blank">固件升级</a>检查固件升级能力并上传固件包。
+2. 固件升级。参考<a href=" https://support.huaweicloud.com/usermanual-iothub/iot_01_0027.html#section3 " target="_blank">固件升级</a>上传固件包。
 
 3. 平台下发获取版本信息通知
 
@@ -386,7 +424,7 @@ dic.Add("result", "success");
    /// 上报固件版本信息
    /// </summary>
    /// <param name="version">固件版本</param>
-   public void reportVersion(string version)
+   public void ReportVersion(string version)
    {
        Dictionary<string, object> node = new Dictionary<string, object>();
    
@@ -501,7 +539,7 @@ dic.Add("result", "success");
    /// <param name="progress">升级进度0-100</param>
    /// <param name="version">当前版本</param>
    /// <param name="description">具体失败的原因，可选参数</param>
-   public void reportOtaStatus(int result, int progress, string version, string description)
+   public void ReportOtaStatus(int result, int progress, string version, string description)
    {
        Dictionary<string, object> node = new Dictionary<string, object>();
        node.Add("result_code", result);
@@ -523,7 +561,7 @@ dic.Add("result", "success");
    }
    ```
 
-# 设备时间同步
+<h1 id="12">设备时间同步</h1>
 
 1. 设备向平台发起时间同步请求。  
 
@@ -577,4 +615,6 @@ dic.Add("result", "success");
    }
    ```
 
-# 开源协议
+<h1 id="13">开源协议</h1>
+
+- 遵循BSD-3开源许可协议

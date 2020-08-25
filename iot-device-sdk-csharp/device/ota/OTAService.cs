@@ -24,7 +24,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Threading;
 using IoT.SDK.Device.Client.Requests;
 using IoT.SDK.Device.Service;
@@ -60,7 +59,7 @@ namespace IoT.SDK.Device.OTA
         /// 设置OTA监听器
         /// </summary>
         /// <param name="otaListener">OTA监听器</param>
-        public void setOtaListener(OTAListener otaListener)
+        public void SetOtaListener(OTAListener otaListener)
         {
             this.otaListener = otaListener;
         }
@@ -98,7 +97,7 @@ namespace IoT.SDK.Device.OTA
         /// 上报固件版本信息
         /// </summary>
         /// <param name="version">固件版本</param>
-        public void reportVersion(string version)
+        public void ReportVersion(string version)
         {
             Dictionary<string, object> node = new Dictionary<string, object>();
             
@@ -121,7 +120,7 @@ namespace IoT.SDK.Device.OTA
         /// <param name="progress">升级进度0-100</param>
         /// <param name="version">当前版本</param>
         /// <param name="description">具体失败的原因，可选参数</param>
-        public void reportOtaStatus(int result, int progress, string version, string description)
+        public void ReportOtaStatus(int result, int progress, string version, string description)
         {
             Dictionary<string, object> node = new Dictionary<string, object>();
             node.Add("result_code", result);
