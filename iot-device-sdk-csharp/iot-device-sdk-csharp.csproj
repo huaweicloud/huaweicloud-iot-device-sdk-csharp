@@ -1,0 +1,108 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{9023DE49-1720-40EC-BDF1-CB74D02EAB3C}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>iot_device_sdk_csharp</RootNamespace>
+    <AssemblyName>iot-device-sdk-csharp</AssemblyName>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="MQTTnet, Version=3.0.11.0, Culture=neutral, PublicKeyToken=b69712f52770c0a7, processorArchitecture=MSIL">
+      <HintPath>..\packages\MQTTnet.3.0.11\lib\net452\MQTTnet.dll</HintPath>
+    </Reference>
+    <Reference Include="MQTTnet.Extensions.ManagedClient, Version=3.0.11.0, Culture=neutral, PublicKeyToken=b69712f52770c0a7, processorArchitecture=MSIL">
+      <HintPath>..\packages\MQTTnet.Extensions.ManagedClient.3.0.11\lib\net452\MQTTnet.Extensions.ManagedClient.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+      <HintPath>..\packages\NLog.4.7.0\lib\net45\NLog.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.Transactions" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="device\client\ClientConf.cs" />
+    <Compile Include="device\client\DeviceClient.cs" />
+    <Compile Include="device\client\listener\CommandListener.cs" />
+    <Compile Include="device\client\listener\CommandV3Listener.cs" />
+    <Compile Include="device\client\listener\DeviceCustomMessageListener.cs" />
+    <Compile Include="device\client\listener\DeviceMessageListener.cs" />
+    <Compile Include="device\client\listener\DeviceShadowListener.cs" />
+    <Compile Include="device\client\listener\MessagePublishListener.cs" />
+    <Compile Include="device\client\listener\PropertyListener.cs" />
+    <Compile Include="device\client\requests\Command.cs" />
+    <Compile Include="device\client\requests\CommandRsp.cs" />
+    <Compile Include="device\client\requests\CommandV3.cs" />
+    <Compile Include="device\client\requests\DeviceEvent.cs" />
+    <Compile Include="device\client\requests\DeviceEvents.cs" />
+    <Compile Include="device\client\requests\DeviceMessage.cs" />
+    <Compile Include="device\client\requests\PropsGet.cs" />
+    <Compile Include="device\client\requests\ServiceProperty.cs" />
+    <Compile Include="device\config\CommonTopic.cs" />
+    <Compile Include="device\exceptions\BaseExceptionEnum.cs" />
+    <Compile Include="device\exceptions\InternalException.cs" />
+    <Compile Include="device\IoTDevice.cs" />
+    <Compile Include="device\ota\OTAListener.cs" />
+    <Compile Include="device\ota\OTAPackage.cs" />
+    <Compile Include="device\ota\OTAService.cs" />
+    <Compile Include="device\service\AbstractDevice.cs" />
+    <Compile Include="device\service\AbstractService.cs" />
+    <Compile Include="device\service\IService.cs" />
+    <Compile Include="device\timesync\TimeSyncListener.cs" />
+    <Compile Include="device\timesync\TimeSyncService.cs" />
+    <Compile Include="device\transport\Connection.cs" />
+    <Compile Include="device\transport\ConnectListener.cs" />
+    <Compile Include="device\transport\mqtt\MqttConnection.cs" />
+    <Compile Include="device\transport\PubMessage.cs" />
+    <Compile Include="device\transport\RawMessage.cs" />
+    <Compile Include="device\transport\RawMessageListener.cs" />
+    <Compile Include="device\utils\EncryptUtil.cs" />
+    <Compile Include="device\utils\IotUtil.cs" />
+    <Compile Include="device\utils\JsonUtil.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="NLog.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
