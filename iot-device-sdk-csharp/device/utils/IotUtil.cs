@@ -72,7 +72,7 @@ namespace IoT.SDK.Device.Utils
         /// <returns></returns>
         public static X509Certificate GetCert(string path)
         {
-            string certPath = Environment.CurrentDirectory + path;
+            string certPath = GetRootDirectory() + path;
             X509Certificate2 crt = new X509Certificate2(certPath);
             return crt;
         }
@@ -107,6 +107,34 @@ namespace IoT.SDK.Device.Utils
             }
 
             return BitConverter.ToString(checksum).Replace("-", string.Empty).ToLower();
+        }
+
+        /// <summary>
+        /// 从deviceid解析nodeId
+        /// </summary>
+        /// <param name="deviceId">设备ID</param>
+        /// <returns>设备物理标识</returns>
+        public static String GetNodeIdFromDeviceId(string deviceId)
+        {
+            try
+            {
+                return deviceId.Substring(deviceId.IndexOf("_") + 1);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("SDK.Error: get node id from device id failed, the device id is " + deviceId);
+
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 获取程序启动路径
+        /// </summary>
+        /// <returns></returns>
+        public static string GetRootDirectory()
+        {
+            return Directory.GetCurrentDirectory();
         }
     }
 }

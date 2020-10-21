@@ -5,6 +5,7 @@ using IoT.SDK.Device.Client.Listener;
 using IoT.SDK.Device.Client.Requests;
 using IoT.SDK.Device.Config;
 using IoT.SDK.Device.Transport;
+using IoT.SDK.Device.Utils;
 
 namespace IoT.Device.Demo
 {
@@ -15,10 +16,14 @@ namespace IoT.Device.Demo
         /// <summary>
         /// 通过Postman查询和设置平台属性
         /// </summary>
-        public void FunPropertiesSample()
+        /// <param name="serverUri"></param>
+        /// <param name="port"></param>
+        /// <param name="deviceId"></param>
+        /// <param name="deviceSecret"></param>
+        public void FunPropertiesSample(string serverUri, int port, string deviceId, string deviceSecret)
         {
             // 创建设备
-            device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 8883, "5eb4cd4049a5ab087d7d4861_test_8746511", "12345678");
+            device = new IoTDevice(serverUri, port, deviceId, deviceSecret);
 
             if (device.Init() != 0)
             {
@@ -28,10 +33,10 @@ namespace IoT.Device.Demo
             device.GetClient().propertyListener = this;
         }
 
-        public void OnPropertiesSet(string requestId, string services)
+        public void OnPropertiesSet(string requestId, List<ServiceProperty> services)
         {
             Console.WriteLine("requestId Set:" + requestId);
-            Console.WriteLine("services Set:" + services);
+            Console.WriteLine("services Set:" + JsonUtil.ConvertObjectToJsonString(services));
 
             device.GetClient().Report(new PubMessage(CommonTopic.TOPIC_SYS_PROPERTIES_SET_RESPONSE + "=" + requestId, "{\"result_code\": 0,\"result_desc\": \"success\"}"));
         }

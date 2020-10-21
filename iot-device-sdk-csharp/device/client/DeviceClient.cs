@@ -37,7 +37,7 @@ using NLog;
 
 namespace IoT.SDK.Device.Client
 {
-    public class DeviceClient : RawMessageListener
+    public class DeviceClient : RawMessageListener, ConnectListener
     {
         private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
@@ -58,7 +58,7 @@ namespace IoT.SDK.Device.Client
             this.CheckClientConf(clientConf);
             this.clientConf = clientConf;
             this.deviceId = clientConf.DeviceId;
-            this.connection = new MqttConnection(clientConf, this);
+            this.connection = new MqttConnection(clientConf, this, this);
             this.device = device;
             this.rawMessageListenerDic = new Dictionary<string, RawMessageListener>();
         }
@@ -74,6 +74,8 @@ namespace IoT.SDK.Device.Client
         public PropertyListener propertyListener { get; set; }
 
         public DeviceMessageListener deviceMessageListener { get; set; }
+
+        public ConnectListener connectListener { get; set; }
 
         public void OnMessageReceived(RawMessage message)
         {
@@ -131,10 +133,43 @@ namespace IoT.SDK.Device.Client
             }
             catch (Exception ex)
             {
-                Log.Error("SDK.Error: Message received error, the topic is " + topic);
+                Log.Error("SDK.Error: message received error, the topic is " + topic);
             }
         }
-        
+
+        /// <summary>
+        /// 上报命令响应
+        /// </summary>
+        /// <param name="requestId">请求id，响应的请求id必须和请求的一致</param>
+        /// <param name="commandRsp">命令响应</param>
+        public void RespondCommand(string requestId, CommandRsp commandRsp)
+        {
+            Report(new PubMessage(CommonTopic.TOPIC_COMMANDS_RESPONSE + "=" + requestId, JsonUtil.ConvertObjectToJsonString(commandRsp)));
+        }
+
+        /// <summary>
+        /// 上报读属性响应
+        /// </summary>
+        /// <param name="requestId">请求id，响应的请求id必须和请求的一致</param>
+        /// <param name="services">服务属性</param>
+        public void RespondPropsGet(string requestId, List<ServiceProperty> services)
+        {
+            DeviceProperties deviceProperties = new DeviceProperties();
+            deviceProperties.services = services;
+
+            Report(new PubMessage(CommonTopic.TOPIC_SYS_PROPERTIES_GET_RESPONSE + "=" + requestId, deviceProperties));
+        }
+
+        /// <summary>
+        /// 上报写属性响应
+        /// </summary>
+        /// <param name="requestId">请求id，响应的请求id必须和请求的一致</param>
+        /// <param name="iotResult">写属性结果</param>
+        public void RespondPropsSet(string requestId, IotResult iotResult)
+        {
+            Report(new PubMessage(CommonTopic.TOPIC_SYS_PROPERTIES_SET_RESPONSE + "=" + requestId, JsonUtil.ConvertObjectToJsonString(iotResult)));
+        }
+
         public void OnCommand(RawMessage message)
         {
             string requestId = IotUtil.GetRequestId(message.Topic);
@@ -144,10 +179,11 @@ namespace IoT.SDK.Device.Client
             if (command == null)
             {
                 Log.Error("invalid command");
+
                 return;
             }
 
-            if (command.deviceId == null || command.deviceId == deviceId)
+            if (commandListener != null && (command.deviceId == null || command.deviceId == deviceId))
             {
                 commandListener.OnCommand(requestId, command.serviceId, command.commandName, command.paras);
 
@@ -195,6 +231,16 @@ namespace IoT.SDK.Device.Client
         }
 
         /// <summary>
+        /// 上报设备消息
+        /// 如果需要上报子设备消息，需要调用DeviceMessage的setDeviceId接口设置为子设备的设备id
+        /// </summary>
+        /// <param name="deviceMessage">设备消息</param>
+        public void ReportDeviceMessage(DeviceMessage deviceMessage)
+        {
+            Report(new PubMessage(string.Format(CommonTopic.TOPIC_MESSAGES_UP, deviceId), JsonUtil.ConvertObjectToJsonString(deviceMessage)));
+        }
+
+        /// <summary>
         /// 订阅自定义topic。系统topic由SDK自动订阅，此接口只能用于订阅自定义topic
         /// </summary>
         /// <param name="topic">自定义Topic</param>
@@ -232,6 +278,22 @@ namespace IoT.SDK.Device.Client
             }
         }
 
+        public void ConnectComplete()
+        {
+            if (connectListener != null)
+            {
+                connectListener.ConnectComplete();
+            }
+        }
+
+        public void ConnectionLost()
+        {
+        }
+
+        public void ConnectFail()
+        {
+        }
+
         /// <summary>
         /// 事件上报
         /// </summary>
@@ -245,7 +307,16 @@ namespace IoT.SDK.Device.Client
             services.Add(evnt);
             events.services = services;
 
-            Report(new PubMessage(string.Format(CommonTopic.TOPIC_SYS_EVENTS_UP, deviceId), events));
+            Report(new PubMessage(CommonTopic.TOPIC_SYS_EVENTS_UP, events));
+        }
+
+        /// <summary>
+        /// 上报设备属性
+        /// </summary>
+        /// <param name="properties">设备属性列表</param>
+        public void ReportProperties(List<ServiceProperty> properties)
+        {
+            Report(new PubMessage(properties));
         }
 
         /// <summary>
@@ -329,17 +400,41 @@ namespace IoT.SDK.Device.Client
         {
             string requestId = IotUtil.GetRequestId(message.Topic);
 
+            PropsSet propsSet = JsonUtil.ConvertJsonStringToObject<PropsSet>(message.ToString());
+            if (propsSet == null)
+            {
+                return;
+            }
+
             // 只处理直连设备的，子设备的由AbstractGateway处理
-            propertyListener.OnPropertiesSet(requestId, message.ToString());
+            if (propertyListener != null && (propsSet.deviceId == null || propsSet.deviceId == this.deviceId))
+            {
+                propertyListener.OnPropertiesSet(requestId, propsSet.services);
+
+                return;
+            }
+
+            device.OnPropertiesSet(requestId, propsSet);
         }
 
         private void OnPropertiesGet(RawMessage message)
         {
             string requestId = IotUtil.GetRequestId(message.Topic);
 
-            JObject obj = JObject.Parse(message.ToString());
+            PropsGet propsGet = JsonUtil.ConvertJsonStringToObject<PropsGet>(message.ToString());
+            if (propsGet == null)
+            {
+                return;
+            }
 
-            propertyListener.OnPropertiesGet(requestId, obj["service_id"].ToString());
+            if (propertyListener != null && (propsGet.deviceId == null || propsGet.deviceId == this.deviceId))
+            {
+                propertyListener.OnPropertiesGet(requestId, propsGet.serviceId);
+
+                return;
+            }
+
+            device.OnPropertiesGet(requestId, propsGet);
         }
 
         /// <summary>

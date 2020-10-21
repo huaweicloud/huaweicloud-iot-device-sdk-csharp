@@ -22,6 +22,8 @@
  *
  * */
 
+using System.Collections.Generic;
+using IoT.SDK.Device.Client;
 using IoT.SDK.Device.Client.Requests;
 
 namespace IoT.SDK.Device.Service
@@ -31,6 +33,20 @@ namespace IoT.SDK.Device.Service
     /// </summary>
     public interface IService
     {
+        /// <summary>
+        /// 读属性回调
+        /// </summary>
+        /// <param name="fields">指定读取的字段名，不指定则读取全部可读字段</param>
+        /// <returns>属性值，json格式</returns>
+        Dictionary<string, object> OnRead(params string[] fields);
+
+        /// <summary>
+        /// 写属性回调
+        /// </summary>
+        /// <param name="properties">属性期望值</param>
+        /// <returns>操作结果jsonObject</returns>
+        IotResult OnWrite(Dictionary<string, object> properties);
+
         /// <summary>
         /// 命令回调
         /// </summary>

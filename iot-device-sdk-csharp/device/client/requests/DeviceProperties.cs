@@ -23,27 +23,23 @@
  * */
 
 using System.Collections.Generic;
-using IoT.SDK.Device.Client.Requests;
+using IoT.SDK.Device.Utils;
 
-namespace IoT.SDK.Device.Client.Listener
+namespace IoT.SDK.Device.Client.Requests
 {
     /// <summary>
-    /// 属性监听器，用于接收平台下发的属性读写操作
+    /// 设备属性内容
     /// </summary>
-    public interface PropertyListener
+    public class DeviceProperties
     {
         /// <summary>
-        /// 处理写属性操作
+        /// 服务属性列表
         /// </summary>
-        /// <param name="requestId">请求ID</param>
-        /// <param name="services">服务属性列表</param>
-        void OnPropertiesSet(string requestId, List<ServiceProperty> services);
+        public List<ServiceProperty> services { get; set; }
 
-        /// <summary>
-        /// 处理读属性操作
-        /// </summary>
-        /// <param name="requestId">请求ID</param>
-        /// <param name="serviceId">服务ID，可选</param>
-        void OnPropertiesGet(string requestId, string serviceId);
+        public override string ToString()
+        {
+            return JsonUtil.ConvertObjectToJsonString(this);
+        }
     }
 }

@@ -29,6 +29,7 @@ using IoT.SDK.Device.Client.Requests;
 using IoT.SDK.Device.OTA;
 using IoT.SDK.Device.Timesync;
 using IoT.SDK.Device.Transport;
+using IoT.SDK.Device.Utils;
 using NLog;
 
 namespace IoT.SDK.Device.Service
@@ -89,7 +90,7 @@ namespace IoT.SDK.Device.Service
         public OTAService otaService { get; set; }
 
         public TimeSyncService timeSyncService { get; set; }
-
+        
         /// <summary>
         /// 添加服务。用户基于AbstractService定义自己的设备服务，并添加到设备
         /// </summary>
@@ -143,6 +144,11 @@ namespace IoT.SDK.Device.Service
         /// <returns>服务实例</returns>
         public AbstractService GetService(string serviceId)
         {
+            if (!services.ContainsKey(serviceId))
+            {
+                return null;
+            }
+
             return services[serviceId];
         }
 
@@ -150,10 +156,10 @@ namespace IoT.SDK.Device.Service
         /// 事件回调，由SDK自动调用
         /// </summary>
         /// <param name="deviceEvents">设备事件</param>
-        public void OnEvent(DeviceEvents deviceEvents)
+        public virtual void OnEvent(DeviceEvents deviceEvents)
         {
             // 子设备的
-            if (deviceEvents.deviceId != null && !(deviceEvents.deviceId == this.deviceId))
+            if (deviceEvents.deviceId != null && deviceEvents.deviceId != this.deviceId)
             {
                 return;
             }
@@ -166,6 +172,101 @@ namespace IoT.SDK.Device.Service
                     deviceService.OnEvent(evnt);
                 }
             }
+        }
+
+        /// <summary>
+        /// 属性查询回调，由SDK自动调用
+        /// </summary>
+        /// <param name="requestId">请求ID</param>
+        /// <param name="propsGet">属性查询请求</param>
+        public void OnPropertiesGet(string requestId, PropsGet propsGet)
+        {
+            List<ServiceProperty> serviceProperties = new List<ServiceProperty>();
+
+            // 查询所有
+            if (propsGet.serviceId == null)
+            {
+                foreach (KeyValuePair<string, AbstractService> kv in services)
+                {
+                    IService deviceService = GetService(kv.Key);
+                    if (deviceService != null)
+                    {
+                        Dictionary<string, object> properties = deviceService.OnRead();
+                        ServiceProperty serviceProperty = new ServiceProperty();
+                        serviceProperty.properties = properties;
+                        serviceProperty.serviceId = kv.Key;
+                        serviceProperties.Add(serviceProperty);
+                    }
+                }
+            }
+            else
+            {
+                IService deviceService = GetService(propsGet.serviceId);
+
+                if (deviceService != null)
+                {
+                    Dictionary<string, object> properties = deviceService.OnRead();
+                    ServiceProperty serviceProperty = new ServiceProperty();
+                    serviceProperty.properties = properties;
+                    serviceProperty.serviceId = propsGet.serviceId;
+                    serviceProperties.Add(serviceProperty);
+                }
+            }
+
+            client.RespondPropsGet(requestId, serviceProperties);
+        }
+
+        /// <summary>
+        /// 属性设置回调，，由SDK自动调用
+        /// </summary>
+        /// <param name="requestId">请求ID</param>
+        /// <param name="propsSet">属性设置请求</param>
+        public void OnPropertiesSet(string requestId, PropsSet propsSet)
+        {
+            foreach (ServiceProperty serviceProp in propsSet.services)
+            {
+                IService deviceService = GetService(serviceProp.serviceId);
+
+                if (deviceService != null)
+                {
+                    // 如果部分失败直接返回
+                    IotResult result = deviceService.OnWrite(serviceProp.properties);
+                    if (result.resultCode != IotResult.SUCCESS.resultCode)
+                    {
+                        client.RespondPropsSet(requestId, result);
+
+                        return;
+                    }
+                }
+            }
+
+            client.RespondPropsSet(requestId, IotResult.SUCCESS);
+        }
+        
+        /// <summary>
+        /// 触发属性变化，SDK会上报变化的属性
+        /// </summary>
+        /// <param name="serviceId">服务id</param>
+        /// <param name="properties">属性列表</param>
+        internal void FirePropertiesChanged(string serviceId, string[] properties)
+        {
+            AbstractService deviceService = GetService(serviceId);
+            if (deviceService == null)
+            {
+                return;
+            }
+
+            Dictionary<string, object> props = deviceService.OnRead(properties);
+
+            ServiceProperty serviceProperty = new ServiceProperty();
+            serviceProperty.serviceId = deviceService.ServiceId;
+            serviceProperty.properties = props;
+            serviceProperty.eventTime = IotUtil.GetEventTime();
+
+            List<ServiceProperty> listProperties = new List<ServiceProperty>();
+            listProperties.Add(serviceProperty);
+
+            client.ReportProperties(listProperties);
         }
 
         /// <summary>

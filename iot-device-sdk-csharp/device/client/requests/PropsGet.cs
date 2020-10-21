@@ -22,7 +22,7 @@
  *
  * */
 
-using System.Collections.Generic;
+using IoT.SDK.Device.Utils;
 using Newtonsoft.Json;
 
 namespace IoT.SDK.Device.Client.Requests
@@ -35,6 +35,12 @@ namespace IoT.SDK.Device.Client.Requests
         [JsonProperty("object_device_id")]
         public string deviceId { get; set; }
 
-        public List<ServiceProperty> services { get; set; }
+        [JsonProperty("service_id")]
+        public string serviceId { get; set; }
+
+        public override string ToString()
+        {
+            return JsonUtil.ConvertObjectToJsonString(this);
+        }
     }
 }

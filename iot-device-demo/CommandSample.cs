@@ -5,7 +5,6 @@ using IoT.SDK.Device.Client.Listener;
 using IoT.SDK.Device.Client.Requests;
 using IoT.SDK.Device.Transport;
 using IoT.SDK.Device.Utils;
-using NLog;
 
 namespace IoT.Device.Demo
 {
@@ -16,10 +15,10 @@ namespace IoT.Device.Demo
     {
         private IoTDevice device;
 
-        public void FunCommandSample()
+        public void FunCommandSample(string serverUri, int port, string deviceId, string deviceSecret)
         {
             // 创建设备
-            device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 8883, "5eb4cd4049a5ab087d7d4861_test_8746511", "12345678");
+            device = new IoTDevice(serverUri, port, deviceId, deviceSecret);
 
             if (device.Init() != 0)
             {
