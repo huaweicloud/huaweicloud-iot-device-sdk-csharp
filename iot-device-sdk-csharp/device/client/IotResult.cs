@@ -22,28 +22,46 @@
  *
  * */
 
-using System.Collections.Generic;
-using IoT.SDK.Device.Client.Requests;
+using IoT.SDK.Device.Utils;
+using Newtonsoft.Json;
 
-namespace IoT.SDK.Device.Client.Listener
+namespace IoT.SDK.Device.Client
 {
     /// <summary>
-    /// 属性监听器，用于接收平台下发的属性读写操作
+    /// 处理结果
     /// </summary>
-    public interface PropertyListener
+    public class IotResult
     {
+        public static readonly IotResult SUCCESS = new IotResult(0, "Success");
+        public static readonly IotResult FAIL = new IotResult(1, "Fail");
+        public static readonly IotResult TIMEOUT = new IotResult(2, "Timeout");
+        
         /// <summary>
-        /// 处理写属性操作
+        /// 处理结果
         /// </summary>
-        /// <param name="requestId">请求ID</param>
-        /// <param name="services">服务属性列表</param>
-        void OnPropertiesSet(string requestId, List<ServiceProperty> services);
+        /// <param name="resultCode">结果码</param>
+        /// <param name="resultDesc">结果描述</param>
+        public IotResult(int resultCode, string resultDesc)
+        {
+            this.resultCode = resultCode;
+            this.resultDesc = resultDesc;
+        }
 
         /// <summary>
-        /// 处理读属性操作
+        /// 结果码，0表示成功，其他为失败
         /// </summary>
-        /// <param name="requestId">请求ID</param>
-        /// <param name="serviceId">服务ID，可选</param>
-        void OnPropertiesGet(string requestId, string serviceId);
+        [JsonProperty("result_code")]
+        public int resultCode { get; set; }
+
+        /// <summary>
+        /// 结果描述
+        /// </summary>
+        [JsonProperty("result_desc")]
+        public string resultDesc { get; set; }
+
+        public override string ToString()
+        {
+            return JsonUtil.ConvertObjectToJsonString(this);
+        }
     }
 }

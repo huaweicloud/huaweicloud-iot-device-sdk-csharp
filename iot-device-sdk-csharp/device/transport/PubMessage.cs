@@ -47,6 +47,12 @@ namespace IoT.SDK.Device.Transport
             this.Message = "{\"services\":" + JsonUtil.ConvertObjectToJsonString(properties) + "}";
         }
 
+        public PubMessage(string topic, DeviceProperties deviceProperties)
+        {
+            this.Topic = topic;
+            this.Message = "{\"services\":" + JsonUtil.ConvertObjectToJsonString(deviceProperties) + "}";
+        }
+
         /// <summary>
         /// 发布原始消息，原始消息和设备消息（DeviceMessage）的区别是：
         /// 1、可以自定义topic，该topic需要在平台侧配置

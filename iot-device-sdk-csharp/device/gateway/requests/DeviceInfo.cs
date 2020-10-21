@@ -22,45 +22,61 @@
  *
  * */
 
-using System.Collections.Generic;
 using System.Text;
 using Newtonsoft.Json;
 
-namespace IoT.SDK.Device.Client.Requests
+namespace IoT.SDK.Device.Gateway.Requests
 {
     /// <summary>
-    /// 服务的属性
+    /// 设备信息
     /// </summary>
-    public class ServiceProperty
+    public class DeviceInfo
     {
-        /// <summary>
-        /// 服务id，和设备模型里一致
-        /// </summary>
-        [JsonProperty("service_id")]
-        public string serviceId { get; set; }
-
-        /// <summary>
-        /// 属性值，具体字段由设备模型定义
-        /// </summary>
-        public Dictionary<string, object> properties { get; set; }
-
-        /// <summary>
-        /// 属性变化的时间，格式：yyyyMMddTHHmmssZ，可选，不带以平台收到的时间为准
-        /// </summary>
-        public string eventTime { get; set; }
+        [JsonProperty("node_id")]
+        public string nodeId { get; set; }
         
+        [JsonProperty("device_id")]
+        public string deviceId { get; set; }
+
+        [JsonProperty("parent_device_id")]
+        private string parent { get; set; }
+
+        private string name { get; set; }
+
+        private string description { get; set; }
+        
+        [JsonProperty("manufacturer_id")]
+        private string manufacturerId { get; set; }
+
+        private string model { get; set; }
+        
+        [JsonProperty("product_id")]
+        private string productId { get; set; }
+        
+        [JsonProperty("fw_version")]
+        private string fwVersion { get; set; }
+        
+        [JsonProperty("sw_version")]
+        private string swVersion { get; set; }
+
+        private string status { get; set; }
+
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder();
-            sb.Append("ServiceProperty{");
-            sb.Append("serviceId='");
-            sb.Append(serviceId);
-            sb.Append("\'");
-            sb.Append(", properties=");
-            sb.Append(properties);
-            sb.Append(", eventTime='");
-            sb.Append(eventTime);
-            sb.Append("\'}");
+            sb.Append("DeviceInfo{");
+            sb.Append("parent='" + parent + '\'');
+            sb.Append(", nodeId='" + nodeId + '\'');
+            sb.Append(", deviceId='" + deviceId + '\'');
+            sb.Append(", name='" + name + '\'');
+            sb.Append(", description='" + description + '\'');
+            sb.Append(", manufacturerId='" + manufacturerId + '\'');
+            sb.Append(", model='" + model + '\'');
+            sb.Append(", productId='" + productId + '\'');
+            sb.Append(", fwVersion='" + fwVersion + '\'');
+            sb.Append(", swVersion='" + swVersion + '\'');
+            sb.Append(", status='" + status + '\'');
+            sb.Append("}");
             return sb.ToString();
         }
     }

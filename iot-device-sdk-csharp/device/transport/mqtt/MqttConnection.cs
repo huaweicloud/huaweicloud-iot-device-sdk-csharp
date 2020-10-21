@@ -50,7 +50,7 @@ namespace IoT.SDK.Device.Transport.Mqtt
 
         private static readonly ushort DEFAULT_CONNECT_TIMEOUT = 60;
 
-        private static ManualResetEvent mre = new ManualResetEvent(true);
+        private static ManualResetEvent mre = new ManualResetEvent(false);
 
         private static IManagedMqttClient client = null;
 
@@ -62,10 +62,11 @@ namespace IoT.SDK.Device.Transport.Mqtt
 
         private RawMessageListener rawMessageListener;
 
-        public MqttConnection(ClientConf clientConf, RawMessageListener rawMessageListener)
+        public MqttConnection(ClientConf clientConf, RawMessageListener rawMessageListener, ConnectListener connectListener)
         {
             this.clientConf = clientConf;
             this.rawMessageListener = rawMessageListener;
+            this.connectListener = connectListener;
         }
         
         /// <summary>
@@ -170,8 +171,7 @@ namespace IoT.SDK.Device.Transport.Mqtt
 
                 // 连接平台设备
                 client.StartAsync(options);
-
-                mre.Reset();
+                
                 mre.WaitOne();
 
                 return client.IsConnected ? 0 : -1;
@@ -295,11 +295,12 @@ namespace IoT.SDK.Device.Transport.Mqtt
 
         private void OnMqttClientConnected(MqttClientConnectedEventArgs e)
         {
-            Log.Debug("connect success, deviceid is " + clientConf.DeviceId);
+            Log.Info("connect success, deviceid is " + clientConf.DeviceId);
             if (connectListener != null)
             {
                 connectListener.ConnectComplete();
             }
+
             mre.Set();
         }
 
@@ -317,6 +318,7 @@ namespace IoT.SDK.Device.Transport.Mqtt
             {
                 Log.Error("SDK.Error: Connect fail, deviceid is " + clientConf.DeviceId);
             }
+
             mre.Set();
         }
 
@@ -352,13 +354,13 @@ namespace IoT.SDK.Device.Transport.Mqtt
 
                 if (e.HasFailed)
                 {
-                    Log.Debug($"messageId " + e.ApplicationMessage.Id + ", Topic: " + e.ApplicationMessage.ApplicationMessage.Topic + ", Payload: " + Encoding.UTF8.GetString(e.ApplicationMessage.ApplicationMessage.Payload) + " is published fail");
+                    Log.Info($"messageId " + e.ApplicationMessage.Id + ", topic: " + e.ApplicationMessage.ApplicationMessage.Topic + ", payload: " + Encoding.UTF8.GetString(e.ApplicationMessage.ApplicationMessage.Payload) + " is published fail");
 
                     rawMessageListener.OnMessageUnPublished(rawMessage);
                 }
                 else if (e.HasSucceeded)
                 {
-                    Log.Debug($"messageId " + e.ApplicationMessage.Id + ", Topic: " + e.ApplicationMessage.ApplicationMessage.Topic + ", Payload: " + Encoding.UTF8.GetString(e.ApplicationMessage.ApplicationMessage.Payload) + " is published success");
+                    Log.Info($"messageId " + e.ApplicationMessage.Id + ", topic: " + e.ApplicationMessage.ApplicationMessage.Topic + ", payload: " + Encoding.UTF8.GetString(e.ApplicationMessage.ApplicationMessage.Payload) + " is published success");
                     
                     rawMessageListener.OnMessagePublished(rawMessage);
                 }

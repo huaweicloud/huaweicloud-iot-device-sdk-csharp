@@ -7,10 +7,10 @@ namespace IoT.Device.Demo
 {
     public class TimeSyncSample : TimeSyncListener
     {
-        public void FunTimeSyncSample()
+        public void FunTimeSyncSample(string serverUri, int port, string deviceId, string deviceSecret)
         {
             // 创建设备
-            IoTDevice device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 1883, "5eb4cd4049a5ab087d7d4861_test_8746511", "12345678");
+            IoTDevice device = new IoTDevice(serverUri, port, deviceId, deviceSecret);
 
             if (device.Init() != 0)
             {
@@ -33,7 +33,7 @@ namespace IoT.Device.Demo
 
         public DateTime StampToDatetime(long timeStamp)
         {
-            var startTime = TimeZone.CurrentTimeZone.ToLocalTime(new DateTime(1970, 1, 1)); // 当地时区
+            var startTime = TimeZoneInfo.ConvertTime(new DateTime(1970, 1, 1), TimeZoneInfo.Utc, TimeZoneInfo.Local); // 当地时区
 
             // 返回转换后的日期
             return startTime.AddMilliseconds(timeStamp);
