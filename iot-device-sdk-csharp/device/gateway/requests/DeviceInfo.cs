@@ -38,6 +38,9 @@ namespace IoT.SDK.Device.Gateway.Requests
         [JsonProperty("device_id")]
         public string deviceId { get; set; }
 
+        [JsonProperty("product_id")]
+        public string productId { get; set; }
+
         [JsonProperty("parent_device_id")]
         private string parent { get; set; }
 
@@ -49,9 +52,6 @@ namespace IoT.SDK.Device.Gateway.Requests
         private string manufacturerId { get; set; }
 
         private string model { get; set; }
-        
-        [JsonProperty("product_id")]
-        private string productId { get; set; }
         
         [JsonProperty("fw_version")]
         private string fwVersion { get; set; }

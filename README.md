@@ -1,4 +1,7 @@
+
+
 # iot-device-sdk-cSharp开发指南
+
 # 目录
 
 <!-- TOC -->
@@ -29,25 +32,28 @@
 
 - [设备时间同步](#12)
 
-- [开源协议](#13)
+- [面向物模型编程](#13)
+
+- [网关场景开发](#14)
+
+- [开源协议](#15)
 
   <!-- /TOC -->
 
 <h1 id="0">修订记录</h1>
-
++ 文档版本02 增加网关和物模型功能（2020-10-25）
 + 文档版本01 第一次正式发布（2020-08-24）
 
 <h1 id="1">前言</h1>
-
 本文通过实例讲述iot-device-sdk-cSharp（以下简称SDK）帮助设备用MQTT协议快速连接到华为物联网平台。
 <h1 id="2">SDK简介</h1>
-
 SDK面向运算、存储能力较强的嵌入式终端设备，开发者通过调用SDK接口，便可实现设备与物联网平台的上下行通讯。SDK当前支持的功能有：
 *  支持设备消息、属性上报、属性读写、命令下发
 *  支持OTA升级
 *  支持密码认证和证书认证两种设备接入方式
 *  支持自定义topic
 *  支持设备影子查询
+*  支持网关和物模型
 
 **SDK目录结构**
 
@@ -55,9 +61,11 @@ iot-device-sdk-java：sdk代码
 
 iot-device-demo：普通直连设备的demo代码
 
-iot-gateway-demo：网关设备的demo代码（功能开发中）
+iot-gateway-demo：网关设备的demo代码
 
 iot-device-feature-test：调用demo程序的入口工程
+
+iot-tcp-device-test：子设备实例启动工程
 
 **第三方类库使用版本**
 
@@ -69,34 +77,31 @@ Newtonsoft.Json：v12.0.3
 
 NLog：v4.7
 
-<h1 id="3">准备工作</h1>
+DotNetty.Codecs：v0.6.0
 
+DotNetty.Transport：v0.6.0
+
+<h1 id="3">准备工作</h1>
 *  已安装Microsoft Visual Studio 2017
 
-*  .NET Framework 版本：4.5.2
+*  .NET Standard 版本：2.0（为支持.NET Standard 2.0 安装升级了Visual Studio：指导路径https://docs.microsoft.com/zh-cn/archive/blogs/benjaminperkins/how-to-install-net-standard-2-0）
 
 <h1 id="4">上传产品模型并注册设备</h1>
-
 为了方便体验，我们提供了一个烟感的产品模型，烟感会上报烟雾值、温度、湿度、烟雾报警、还支持响铃报警命令。以烟感例，体验消息上报、属性上报等功能。
 
-1. 访问[设备接入服务](https://www.huaweicloud.com/product/iothub.html)，单击“立即使用”进入设备接入控制台。
+1.访问[设备接入服务](https://www.huaweicloud.com/product/iothub.html)，单击“立即使用”进入设备接入控制台。
+2.访问管理控制台，查看MQTTS设备接入地址，保存该地址。![](./doc/upload_profile_1.png)
+3.在设备接入控制台选择“产品”，单击右上角的“创建产品”，在弹出的页面中，填写“产品名称”、“协议类型”、“数据格式”、“厂商名称”、“所属行业”、“设备类型”等信息，然后点击右下角“立即创建”。
+ - 协议类型选择“MQTT”；
 
-3. 访问管理控制台，查看MQTTS设备接入地址，保存该地址。![](./doc/upload_profile_1.png)
+ - 数据格式选择“JSON”。![](./doc/upload_profile_2.png)
 
-4. 在设备接入控制台选择“产品”，单击右上角的“创建产品”，在弹出的页面中，填写“产品名称”、“协议类型”、“数据格式”、“厂商名称”、“所属行业”、“设备类型”等信息，然后点击右下角“立即创建”。
-
-   - 协议类型选择“MQTT”；
-
-   - 数据格式选择“JSON”。![](./doc/upload_profile_2.png)
-
-5. 产品创建成功后，单击“详情”进入产品详情，在功能定义页面，单击“上传模型文件”，上传烟感产品模型[smokeDetector](https://support.huaweicloud.com/devg-iothub/resource/smokeDetector_cb097d20d77b4240adf1f33d36b3c278_smokeDetector.zip)。
-
-6. 在左侧导航栏，选择“ 设备 > 所有设备”，单击右上角“注册设备”，在弹出的页面中，填写注册设备参数，然后单击“确定”。![](./doc/upload_profile_3.png)
-
-7. 设备注册成功后保存设备标识码、设备ID、密钥。
+4.产品创建成功后，单击“详情”进入产品详情，在功能定义页面，单击“上传模型文件”，上传烟感产品模型[smokeDetector](https://support.huaweicloud.com/devg-iothub/resource/smokeDetector_cb097d20d77b4240adf1f33d36b3c278_smokeDetector.zip)。
+5.在左侧导航栏，选择“ 设备 > 所有设备”，单击右上角“注册设备”，在弹出的页面中，填写注册设备参数，然后单击“确定”。
+ ![](./doc/upload_profile_3.png)
+6.设备注册成功后保存设备标识码、设备ID、密钥。
 
 <h1 id="5">设备初始化</h1>
-
 1. 创建设备。
 
    设备接入平台时，物联网平台提供密钥和证书两种鉴权方式。
@@ -127,10 +132,10 @@ NLog：v4.7
      openssl x509 -in deviceCert.pem -out deviceCert.crt //先生成crt格式的证书；
      openssl pkcs12 -export -out deviceCert.pfx - inkey deviceCert.key -in deviceCert.crt - certfile rootCA.pem；
      
-     X509Certificate2 clientCert = new X509Certificate2(@"\\Test01\\deviceCert.pfx", "123456");//必须使用X.509Certificate2
+     X509Certificate2 clientCert = new X509Certificate2(@"\\Test01\\deviceCert.pfx", "123456");//必须使用X509Certificate2
      ```
 
-   - 参考以下命令，创建设备。
+   - 参考以下代码样例，创建设备。
 
      ```c#
      string deviceCertPath = Environment.CurrentDirectory + @"\certificate\deviceCert.pfx";
@@ -147,7 +152,7 @@ NLog：v4.7
      IoTDevice device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 8883, "5eb4cd4049a5ab087d7d4861_demo", deviceCert);
      ```
 
-3. 调用init接口，建立连接。该接口是阻塞调用，如果建立连接成功会返回0。
+2. 调用init函数，建立连接。该函数是阻塞调用，如果建立连接成功会返回0。
 
    ```c#
    if (device.Init() != 0)
@@ -156,10 +161,9 @@ NLog：v4.7
    }
    ```
 
-4. 连接成功后，设备和平台之间开始通讯。调用IoT Device 的GetClient接口获取设备客户端，客户端提供了消息、属性、命令等通讯接口。
+3. 连接成功后，设备和平台之间开始通讯。调用IoTDevice 的GetClient函数获取设备客户端，客户端提供了消息、属性、命令等通讯接口。
 
 <h1 id="6">属性上报</h1>
-
 打开PropertySample类，这个例子中会上报alarm、temperature、humidity、smokeConcentration这四个属性。
 
 ```c#
@@ -205,10 +209,9 @@ public void OnMessageUnPublished(RawMessage message)
 	Console.WriteLine();
 }
 ```
-修改PropertySample的FunPropertySample函数后直接运行iot-device-feature-test工程，调用FunPropertySample函数上报属性。
+在iot-device-feature-test工程中修改设备信息，并在main函数中调用PropertySample类的FunPropertySample函数上报属性。
 
 <h1 id="7">消息上报</h1>
-
 消息上报是指设备向平台上报消息，本例还包含自定义Topic消息上报，以及自定义Topic命令下发功能。
 
 1. 调用IoTDevice的GetClient接口获取客户端。
@@ -259,19 +262,18 @@ public void OnMessageUnPublished(RawMessage message)
 
 3. 选择对应设备，点击“查看”，在设备详情页面启动设备消息跟踪。
 
-4. 修改MessageSample类的FunMessageSample函数，替换自己的设备参数后启动iot-device-feature-test工程调用MessageSample类。
+4.  在iot-device-feature-test工程中修改设备信息，并在main函数中调用MessageSample类的FunMessageSample函数上报消息。
 
 5. 在设备接入控制台，选择“设备 > 所有设备”查看设备是否在线。![](./doc/upload_profile_4.png)
 
 6. 平台收到设备上报的消息。![](./doc/upload_profile_5.png)
 
 <h1 id="8">属性读写</h1>
-
-调用客户端的propertyListener方法来设置属性回调接口。在PropertiesGetAndSetSample这个例子中，我们实现了属性读写接口。
+调用客户端的PropertyListener接口来设置和获取属性的两个函数。在PropertiesGetAndSetSample这个例子中，我们实现了属性读写接口。
 
 - 写属性处理：实现了属性的写操作，SDK收到属性值；
 
-- 读属性处理：将本地属性值按照接口格式进行拼装；
+- 读属性处理：将本地属性值按照JSON格式进行拼装；
 - 属性读写接口需要调用Report接口来上报操作结果；
 - 如果设备不支持平台主动到设备读，OnPropertiesGet接口可以空实现；
 
@@ -327,7 +329,6 @@ public void OnPropertiesGet(string requestId, string serviceId)
 }
 ```
 <h1 id="9">命令下发</h1>
-
 设置命令监听器用来接收平台下发的命令，在回调接口里，需要对命令进行处理，并上报响应。
 
 在CommandSample例子中实现了命令的处理，收到命令后仅进行控制台显示，然后调用Report上报响应。
@@ -364,7 +365,6 @@ dic.Add("result", "success");
 }
 ```
 <h1 id="10">设备影子</h1>
-
 1. 设备请求获取平台的设备影子数据，用于设备向平台获取设备影子数据。
 
    ```c#
@@ -390,7 +390,6 @@ dic.Add("result", "success");
    ```
 
 <h1 id="11">OTA升级</h1>
-
 1. 软件升级。参考<a href=" https://support.huaweicloud.com/usermanual-iothub/iot_01_0047.html#section3 " target="_blank">软件升级指导</a>上传软件包。
 
 2. 固件升级。参考<a href=" https://support.huaweicloud.com/usermanual-iothub/iot_01_0027.html#section3 " target="_blank">固件升级</a>上传固件包。
@@ -537,7 +536,7 @@ dic.Add("result", "success");
    /// </summary>
    /// <param name="result">升级结果</param>
    /// <param name="progress">升级进度0-100</param>
-   /// <param name="version">当前版本</param>
+   /// <param name="version">当前软件或固件版本</param>
    /// <param name="description">具体失败的原因，可选参数</param>
    public void ReportOtaStatus(int result, int progress, string version, string description)
    {
@@ -562,7 +561,6 @@ dic.Add("result", "success");
    ```
 
 <h1 id="12">设备时间同步</h1>
-
 1. 设备向平台发起时间同步请求。  
 
    ```c#
@@ -582,9 +580,9 @@ dic.Add("result", "success");
    }
    ```
 
-2. 平台向设备发送时间同步响应，携带设备发送时间参数device_send_time。当平台收到时间server_recv_time 后，向设备发送时间server_send_time 。
+2. 平台向设备发送时间同步响应，携带设备发送时间参数device_send_time。当平台收到设备请求时间server_recv_time 后，向设备发送时间server_send_time 。
 
-   假设设备收到的设备侧时间为device_recv_time ，则设备计算自己的准确时间为：
+   假设设备收到的设备侧时间为device_recv_time ，则设备收到平台响应的真实时间为：
 
    (server_recv_time + server_send_time + device_recv_time - device_send_time) / 2
 
@@ -615,6 +613,393 @@ dic.Add("result", "success");
    }
    ```
 
-<h1 id="13">开源协议</h1>
+<h1 id="13">面向物模型编程</h1>
+前面介绍了直接调用设备客户端的接口和平台进行通讯的方法，这种方式比较灵活，但用户需要妥善处理每一个接口，实现比较复杂。
 
+SDK提供了一种更简单的方式，即面向物模型编程。面向物模型编程指基于SDK提供的物模型抽象能力，设备代码按照物模型定义设备服务，然后可以直接访问设备服务（即调用设备服务的属性读写接口），SDK就能自动和平台通讯，完成属性的同步和命令的调用。
+
+相比直接调用客户端接口和平台进行通讯，面向物模型编程更简单，它简化了设备侧代码的复杂度，让设备代码只需要关注业务，而不用关注和平台的通讯过程。这种方式适合多数场景。
+
+SmokeDetector例子演示了如何面向物模型编程：
+
+1. 按照物模型定义服务类和服务的属性（如果有多个服务，则需要定义多个服务类）：
+
+   ```c#
+   public class SmokeDetectorService : AbstractService
+   {
+   	public SmokeDetectorService()
+   	{
+   		this.SetDeviceService(this);
+   	}
+   
+   	// 按照设备模型定义属性，注意属性的name和类型需要和模型一致
+   	[Property(Name = "alarm", Writeable = true)]
+   	public int smokeAlarm { get; set; } = 1;
+   
+   	[Property(Name = "smokeConcentration", Writeable = false)]
+   	public float concentration
+   	{
+   		get
+   		{
+   			return (float)new Random().NextDouble();
+   		}
+   	}
+   
+   	[Property(Writeable = false)]
+   	public int humidity { get; set; }
+   	
+   	[Property(Writeable = false)]
+   	public float temperature
+   	{
+   		get
+   		{
+   			// 模拟从传感器读取数据
+   			return (float)new Random().NextDouble();
+   		}
+   	}
+   }
+   ```
+   用[Property()]特性来表示是一个属性，可以用Name指定属性名，如果不指定则使用字段名。
+
+   属性可以加上Writeable来控制权限，如果属性只读，则加上Writeable= false，如果不加，默认认为可读写。
+
+2. 定义服务的命令。设备收到平台下发的命令时，SDK会自动调用这里定义的命令。
+
+   接口入参和返回值的类型是固定的不能修改，否则运行时会出现错误。
+
+   这里定义的是一个响铃报警命令，命令名为ringAlarm。
+
+   	/// <summary>
+   	/// 定义命令，注意接口入参和返回值类型是固定的不能修改，否则运行时会出现错误
+   	/// 方法名和模型命令一致
+   	/// </summary>
+   	/// <param name="jsonParas"></param>
+   	/// <returns></returns>
+   	[DeviceCommand(Name = "ringAlarm")]
+   	public CommandRsp alarm(string jsonParas)
+   	{
+   		JObject obj = JObject.Parse(jsonParas);
+   		int value = (int)obj["value"];
+   		
+   		return new CommandRsp(0);
+   	}
+
+3. 在FunSmokeDetector函数中创建服务实例并添加到设备。
+
+   ```c#
+   // 创建设备
+   IoTDevice device = new IoTDevice(serverUri, port, deviceId, deviceSecret);
+   
+   if (device.Init() != 0)
+   {
+   	return;
+   }
+   
+   // 创建设备服务
+   SmokeDetectorService smokeDetectorService = new SmokeDetectorService();
+   device.AddService("smokeDetector", smokeDetectorService);
+   ```
+
+4. 开启周期上报：
+
+   ```c#
+   // 启动自动周期上报
+   smokeDetectorService.EnableAutoReport(10000);
+   ```
+
+   注：如果不想周期上报，也可以调用FirePropertiesChanged接口手工触发上报。
+
+   ```c#
+   smokeDetectorService.FirePropertiesChanged();
+   ```
+
+   直接运行iot-device-feature-test工程，调用程序：
+
+   ```c#
+   SmokeDetector sd = new SmokeDetector();
+   sd.FunSmokeDetector(serverUri, 8883, deviceId, deviceSecret);
+   ```
+
+   查看日志在上报属性：
+   ![](./doc/product_model_1.png)
+
+   在平台侧查看设备影子：
+
+   ![](./doc/product_model_2.png)
+
+   在平台上修改属性alarm为2，查看设备日志收到属性设置：
+
+   ![](./doc/product_model_3.png)
+
+   在平台下发ringAlarm命令value值为12：
+
+   查看设备日志看到ringAlarm命令被调用，并且上报了响应：
+
+   ![](./doc/product_model_4.png)
+
+<h1 id="14">网关场景开发</h1>
+网关是一个特殊的设备，除具备一般设备功能之外，还具有子设备管理、子设备消息转发的功能。SDK提供了AbstractGateway抽象类来简化网关的实现。该类提供了子设备管理功能，需要从平台获取子设备信息并保存（需要子类提供子设备持久化接口）、子设备下行消息转发功能（需要子类实现转发处理接口）、以及上报子设备列表、上报子设备属性、上报子设备状态、上报子设备消息等接口。
+
+- **使用AbstractGateway类**
+
+  继承该类，在构造函数里提供子设备信息持久化接口，实现其下行消息转发的抽象接口：
+
+  ```c#
+  /// <summary>
+  /// 子设备命令下发处理，网关需要转发给子设备，需要子类实现
+  /// </summary>
+  /// <param name="requestId">请求Id</param>
+  /// <param name="command">命令</param>
+  public abstract void OnSubdevCommand(string requestId, Command command);
+  
+  /// <summary>
+  /// 子设备属性设置，网关需要转发给子设备，需要子类实现
+  /// </summary>
+  /// <param name="requestId">请求ID</param>
+  /// <param name="propsSet">属性设置</param>
+  public abstract void OnSubdevPropertiesSet(string requestId, PropsSet propsSet);
+  
+  /// <summary>
+  /// 子设备读属性，网关需要转发给子设备，需要子类实现
+  /// </summary>
+  /// <param name="requestId">请求ID</param>
+  /// <param name="propsGet">属性查询</param>
+  public abstract void OnSubdevPropertiesGet(string requestId, PropsGet propsGet);
+  
+  /// <summary>
+  /// 子设备消息下发，网关需要转发给子设备，需要子类实现
+  /// </summary>
+  /// <param name="message">设备消息</param>
+  public abstract void OnSubdevMessage(DeviceMessage message);
+  ```
+
+- **iot-gateway-demo代码介绍**
+
+  工程iot-gateway-demo基于**AbstractGateway**实现了一个简单的网关，它提供TCP设备接入能力。关键类：
+
+  SimpleGateway：继承自AbstractGateway，实现子设备管理和下行消息转发
+
+  StringTcpServer：基于DotNetty实现一个TCP server，本例中子设备采用TCP协议，并且首条消息为鉴权消息
+
+  SubDevicesFilePersistence：子设备信息持久化，采用json文件来保存子设备信息，并在内存中做了缓存
+
+  Session：设备会话类，保存了设备id和TCP的channel的对应关系
+
+- **SimpleGateway类**
+
+  **添加或删除子设备处理**
+
+  添加子设备：AbstractGateway的OnAddSubDevices接口已经完成了子设备信息的保存。我们不需要再增加额外处理，因此SimpleGateway不需要重写OnAddSubDevices接口。
+
+  删除子设备：我们不仅需要修改持久化信息，还需要断开当前子设备的连接。所以我们重写了OnDeleteSubDevices接口，然后调用父类的OnDeleteSubDevices。
+
+- **下行消息处理**
+
+  网关收到平台下行消息时，需要转发给子设备。平台下行消息分为三种：设备消息、属性读写、命令。
+
+  - **设备消息：**这里我们需要根据deviceId获取nodeId，从而获取session，从session里获取channel，就可以往channel发送消息。在转发消息时，可以根据需要进行一定的转换处理。
+
+    ```c#
+    public override void OnSubdevMessage(DeviceMessage message)
+    {
+    	if (message.deviceId == null)
+    	{
+    		return;
+    	}
+    
+        // 平台接口带的都是deviceId，deviceId是由nodeId和productId拼装生成的，即
+        // deviceId = productId_nodeId
+    	string nodeId = IotUtil.GetNodeIdFromDeviceId(message.deviceId);
+    	if (nodeId == null)
+    	{
+    		return;
+    	}
+    
+        // 通过nodeId获取session，进一步获取channel
+    	Session session = nodeIdToSesseionDic[nodeId];
+    	if (session == null)
+    	{
+    		Log.Error("session is null ,nodeId:" + nodeId);
+    		return;
+    	}
+    	
+        // 直接把消息转发给子设备
+    	session.channel.WriteAndFlushAsync(message.content);
+    	Log.Info("WriteAndFlushAsync " + message.content);
+    }
+    ```
+
+  - **属性读写：**
+
+    属性读写包括属性设置和属性查询。
+
+    属性设置：
+
+    ```c#
+    public override void OnSubdevPropertiesSet(string requestId, PropsSet propsSet)
+    {
+    	if (propsSet.deviceId == null)
+    	{
+    		return;
+    	}
+    
+    	string nodeId = IotUtil.GetNodeIdFromDeviceId(propsSet.deviceId);
+    	if (nodeId == null)
+    	{
+    		return;
+    	}
+    
+    	Session session = nodeIdToSesseionDic[nodeId];
+    	if (session == null)
+    	{
+    		Log.Error("session is null ,nodeId:" + nodeId);
+    		return;
+    	}
+    
+    	// 这里我们直接把对象转成string发给子设备，实际场景中可能需要进行一定的编解码转换
+     session.channel.WriteAndFlushAsync(JsonUtil.ConvertObjectToJsonString(propsSet));
+    
+    	// 为了简化处理，我们在这里直接回响应。更合理做法是在子设备处理完后再回响应
+    	GetClient().RespondPropsSet(requestId, IotResult.SUCCESS);
+    
+    	Log.Info("WriteAndFlushAsync " + propsSet);
+    }
+    ```
+
+    属性查询：
+
+    ```c#
+    public override void OnSubdevPropertiesGet(string requestId, PropsGet propsGet)
+    {
+    	// 不建议平台直接读子设备的属性，这里直接返回失败
+    	Log.Error("not support onSubdevPropertiesGet");
+    	GetClient().RespondPropsSet(requestId, IotResult.FAIL);
+    }
+    ```
+
+  - **命令：**处理流程和消息类似，实际场景中可能需要不同的编解码转换。
+
+    ```c#
+    public override void OnSubdevCommand(string requestId, Command command)
+    {
+    	if (command.deviceId == null)
+    	{
+    		return;
+    	}
+    
+    	string nodeId = IotUtil.GetNodeIdFromDeviceId(command.deviceId);
+    	if (nodeId == null)
+    	{
+    		return;
+    	}
+    
+    	Session session = nodeIdToSesseionDic[nodeId];
+    	if (session == null)
+    	{
+    		Log.Error("session is null ,nodeId is " + nodeId);
+    
+    		return;
+    	}
+    
+    	// 这里我们直接把command对象转成string发给子设备，实际场景中可能需要进行一定的编解码转换
+    	session.channel.WriteAndFlushAsync(JsonUtil.ConvertObjectToJsonString(command));
+    
+    	// 为了简化处理，我们在这里直接回命令响应。更合理做法是在子设备处理完后再回响应
+    	GetClient().RespondCommand(requestId, new CommandRsp(0));
+    	Log.Info("WriteAndFlushAsync " + command);
+    }
+    ```
+
+- **上行消息处理**
+
+  上行处理在StringTcpServer的channelRead0接口里。如果会话不存在，需要先创建会话：
+
+  如果子设备信息不存在，这里创建会话会失败。
+
+  ```c#
+  protected override void ChannelRead0(IChannelHandlerContext ctx, string msg)
+  {
+  	IChannel incoming = ctx.Channel;
+  	Log.Info("channelRead0" + incoming.RemoteAddress + " msg :" + msg);
+  
+  	// 如果是首条消息，创建session
+  	Session session = simpleGateway.GetSessionByChannel(incoming.Id.AsLongText());
+  	if (session == null)
+  	{
+  		string nodeId = msg;
+  		session = simpleGateway.CreateSession(nodeId, incoming);
+  
+  		// 创建会话失败
+  		if (session == null)
+  		{
+  			Log.Info("close channel");
+  			ctx.CloseAsync().Wait();
+  		}
+  		else
+  		{
+  			Log.Info(session.deviceId + " ready to go online.");
+  			simpleGateway.ReportSubDeviceStatus(session.deviceId, "ONLINE");
+  		}
+  	}
+  }
+  ```
+
+  如果会话存在，则进行消息转发：
+
+  ```c#
+  else
+  {
+  	// 网关收到子设备上行数据时，可以将数据上报到平台。
+  	// 实际使用时根据需要选择一种即可，这里为了演示，两种类型都转发一遍
+  
+  	// 上报消息用reportSubDeviceMessage
+  	DeviceMessage deviceMessage = new DeviceMessage(msg);
+  	deviceMessage.deviceId = session.deviceId;
+  	simpleGateway.ReportSubDeviceMessage(deviceMessage);
+  
+  	// 报属性则调用reportSubDeviceProperties，属性的serviceId和字段名要和子设备的产品模型保持一致
+  	ServiceProperty serviceProperty = new ServiceProperty();
+  	serviceProperty.serviceId = "parameter";
+  	Dictionary<string, object> props = new Dictionary<string, object>();
+  
+  	// 属性值暂且写死，实际中应该根据子设备上报的进行组装
+  	props.Add("alarm", 1);
+  	props.Add("temperature", 2);
+  	serviceProperty.properties = props;
+  
+  	List<ServiceProperty> services = new List<ServiceProperty>();
+  	services.Add(serviceProperty);
+  	simpleGateway.ReportSubDeviceProperties(session.deviceId, services);
+  }
+  ```
+
+  到这里，网关的关键代码介绍完了，其他的部分看源代码。整个demo是开源的，用户可以根据需要进行扩展。比如修改持久化方式、转发中增加消息格式的转换、实现其他子设备接入协议。
+
+- **网关的使用**
+
+  1. 在平台上为网关注册开户。
+
+  2. 在iot-device-feature-test工程中修改设备信息，并在main函数中调用如下函数：
+
+     ```c#
+     new StringTcpServer(serverUri, 8883, deviceId, deviceSecret);
+     ```
+
+  3. 启动iot-device-feature-test工程调用StringTcpServer类，在平台上看到该网关在线后，添加子设备。![](./doc/gateway_1.png)
+
+     此时网关上日志打印：![](./doc/gateway_2.png)
+
+  4. 启动iot-tcp-device-test工程调用TcpDevice类，建立连接后，输入子设备的nodeId。![](./doc/gateway_3.png)
+
+  5. 在平台上看到子设备上线。![](./doc/gateway_4.png)
+
+  6. 子设备上报消息![](./doc/gateway_5.png)
+
+     查看日志看到上报成功![](./doc/gateway_6.png)
+
+  7. 查看消息跟踪
+
+     在平台上找到网关，选择 设备详情-消息跟踪，打开消息跟踪。继续让子设备发送数据，等待片刻后看到消息跟踪：![](./doc/gateway_7.png)
+
+<h1 id="15">开源协议</h1>
 - 遵循BSD-3开源许可协议

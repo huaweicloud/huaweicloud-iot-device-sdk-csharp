@@ -57,7 +57,7 @@ namespace IoT.Gateway.Demo
                         break;
                     }
                     
-                    Task task = channel.WriteAndFlushAsync(inputStr);
+                    await channel.WriteAndFlushAsync(inputStr);
                 }
             }
             catch (Exception ex)

@@ -44,8 +44,6 @@ namespace IoT.SDK.Device.Service
         private DeviceClient client;
 
         private Dictionary<string, AbstractService> services = new Dictionary<string, AbstractService>();
-
-        private string deviceId;
         
         /// <summary>
         /// 构造函数，使用密码创建设备
@@ -87,6 +85,8 @@ namespace IoT.SDK.Device.Service
             Log.Info("create device: " + clientConf.DeviceId);
         }
 
+        public string deviceId { get; set; }
+
         public OTAService otaService { get; set; }
 
         public TimeSyncService timeSyncService { get; set; }
@@ -126,7 +126,7 @@ namespace IoT.SDK.Device.Service
         /// </summary>
         /// <param name="requestId">请求ID</param>
         /// <param name="command">命令</param>
-        public void OnCommand(string requestId, Command command)
+        public virtual void OnCommand(string requestId, Command command)
         {
             IService service = this.GetService(command.serviceId);
 

@@ -6,6 +6,7 @@ using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
 using IoT.SDK.Device.Client.Requests;
+using IoT.SDK.Device.Gateway.Requests;
 using NLog;
 
 namespace IoT.Gateway.Demo
@@ -26,6 +27,26 @@ namespace IoT.Gateway.Demo
             {
                 return;
             }
+            
+            List<DeviceInfo> subDeviceInfoList = new List<DeviceInfo>();
+
+            DeviceInfo deviceInfo = new DeviceInfo();
+
+            deviceInfo.nodeId = "test_sub";
+
+            deviceInfo.productId = "5eb4cd4049a5ab087d7d4861";
+
+            subDeviceInfoList.Add(deviceInfo);
+
+            ////设备侧添加子设备
+            ////simpleGateway.ReportAddSubDevice(subDeviceInfoList);
+
+            List<string> deviceIds = new List<string>();
+
+            deviceIds.Add("5eb4cd4049a5ab087d7d4861_test_sub");
+
+            ////设备侧删除子设备
+            ////simpleGateway.ReportDeleteSubDevice(deviceIds);
 
             Task.Run(async () => { await Run(); });
         }
@@ -110,12 +131,12 @@ namespace IoT.Gateway.Demo
 
                     // 报属性则调用reportSubDeviceProperties，属性的serviceId和字段名要和子设备的产品模型保持一致
                     ServiceProperty serviceProperty = new ServiceProperty();
-                    serviceProperty.serviceId = "parameter";
+                    serviceProperty.serviceId = "smokeDetector";
                     Dictionary<string, object> props = new Dictionary<string, object>();
 
                     // 属性值暂且写死，实际中应该根据子设备上报的进行组装
                     props.Add("alarm", 1);
-                    props.Add("temprature", 2);
+                    props.Add("temperature", 2);
                     serviceProperty.properties = props;
 
                     List<ServiceProperty> services = new List<ServiceProperty>();
