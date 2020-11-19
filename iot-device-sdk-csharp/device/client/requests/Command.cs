@@ -36,6 +36,7 @@ namespace IoT.SDK.Device.Client.Requests
         [JsonProperty("command_name")]
         public string commandName { get; set; }
         
+        [JsonProperty("object_device_id")]
         public string deviceId { get; set; }
 
         public Dictionary<string, object> paras { get; set; }

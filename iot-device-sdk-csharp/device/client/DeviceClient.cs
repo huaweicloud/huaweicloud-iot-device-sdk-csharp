@@ -91,6 +91,7 @@ namespace IoT.SDK.Device.Client
                 if (listener != null)
                 {
                     listener.OnMessageReceived(message);
+
                     return;
                 }
 

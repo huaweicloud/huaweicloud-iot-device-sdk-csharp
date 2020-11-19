@@ -1,182 +1,186 @@
-# iot-device-sdk-cSharp开发指南
-# 目录
+English | [简体中文](README_CN.md)
+
+# iot-device-sdk-cSharp Development Guide
+
+# Contents
 
 <!-- TOC -->
 
-- [修订记录](#0)
+- [Change History](#0)
 
-- [前言](#1)
+- [About This Document](#1)
 
-- [SDK简介](#2)
+- [SDK Overview](#2)
 
-- [准备工作](#3)
+- [Preparations](#3)
 
-- [上传产品模型并注册设备](#4)
+- [Uploading a Product Model and Registering a Device](#4)
 
-- [设备初始化](#5)
+- [Initializing a Device](#5)
 
-- [属性上报](#6)
+- [Reporting Properties](#6)
 
-- [消息上报](#7)
+- [Reporting a Message](#7)
 
-- [属性读写](#8)
+- [Reading/Writing Properties](#8)
 
-- [命令下发](#9)
+- [Delivering a Command](#9)
 
-- [设备影子](#10)
+- [Using a Device Shadow](#10)
 
-- [OTA升级](#11)
+- [Performing an OTA Upgrade](#11)
 
-- [设备时间同步](#12)
+- [Synchronizing Device Time](#12)
 
-- [开源协议](#13)
+- [Object-Oriented Programming](#13)
+
+- [Developing a Gateway](#14)
+
+- [Open-Source Protocols](#15)
 
   <!-- /TOC -->
 
-<h1 id="0">修订记录</h1>
+<h1 id="0">Change History</h1>
++ Document version 02: The gateway and product model functions are added (2020-10-25).
++ Issue 01 First official release (2020-08-24)
 
-+ 文档版本01 第一次正式发布（2020-08-24）
+<h1 id="1">About This Document</h1>
+This document uses an example to describe how to use iot-device-sdk-cSharp (SDK for short) to quickly connect MQTT devices to the HUAWEI CLOUD IoT platform.
+<h1 id="2">SDK Overview</h1>
+The SDK is designed for embedded devices with powerful computing and storage capabilities. You can call SDK APIs to implement communication between devices and the platform. The SDK currently supports:
+* Device message reporting, property reporting, property reading and writing, and command delivery
+* Over-the-air (OTA) upgrades
+* Secret authentication and certificate authentication for device access
+* Topic customization
+* Device shadow query
+* Gateways and product models
 
-<h1 id="1">前言</h1>
+**SDK Directory Structure**
 
-本文通过实例讲述iot-device-sdk-cSharp（以下简称SDK）帮助设备用MQTT协议快速连接到华为物联网平台。
-<h1 id="2">SDK简介</h1>
+iot-device-sdk-java: SDK code
 
-SDK面向运算、存储能力较强的嵌入式终端设备，开发者通过调用SDK接口，便可实现设备与物联网平台的上下行通讯。SDK当前支持的功能有：
-*  支持设备消息、属性上报、属性读写、命令下发
-*  支持OTA升级
-*  支持密码认证和证书认证两种设备接入方式
-*  支持自定义topic
-*  支持设备影子查询
+iot-device-demo: demo code of a common directly connected device
 
-**SDK目录结构**
+iot-gateway-demo: demo code of a gateway device
 
-iot-device-sdk-java：sdk代码
+iot-device-feature-test: project for calling a demo program
 
-iot-device-demo：普通直连设备的demo代码
+iot-tcp-device-test: project for starting up a child device instance
 
-iot-gateway-demo：网关设备的demo代码（功能开发中）
+**Version of third-party class libraries**
 
-iot-device-feature-test：调用demo程序的入口工程
+MQTTnet: v3.0.11
 
-**第三方类库使用版本**
+MQTTnet.Extensions.ManagedClient: v3.0.11
 
-MQTTnet：v3.0.11
+Newtonsoft.Json: v12.0.3
 
-MQTTnet.Extensions.ManagedClient：v3.0.11
+NLog: v4.7
 
-Newtonsoft.Json：v12.0.3
+DotNetty.Codecs: v0.6.0
 
-NLog：v4.7
+DotNetty.Transport: v0.6.0
 
-<h1 id="3">准备工作</h1>
+<h1 id="3">Preparations</h1>
+* Ensure that you have installed Microsoft Visual Studio 2017.
 
-*  已安装Microsoft Visual Studio 2017
+* .NET Standard version: 2.0 (You can refer to a [document](https://docs.microsoft.com/zh-cn/archive/blogs/benjaminperkins/how-to-install-net-standard-2-0) to upgrade Visual Studio for an easier installation of .NET Standard 2.0.)
 
-*  .NET Framework 版本：4.5.2
+<h1 id="4">Uploading a Product Model and Registering a Device</h1>
+We provide a smoke detector product model for your experience. The smoke detector can report the smoke density, temperature, humidity, and smoke alarms, and execute the ring alarm command. The following procedures use the smoke detector as an example to show you SDK functions, such as message reporting and property reporting.
 
-<h1 id="4">上传产品模型并注册设备</h1>
+1. Visit [IoT Device Access (IoTDA)](https://www.huaweicloud.com/en-us/product/iothub.html) and click **Use Now** to access the IoTDA console.
+2. View the MQTTS device access address, and save it. ![](./doc/doc_en/upload_profile_1.png)
+3. On the IoTDA console, choose **Products** in the navigation pane, and click **Create Product** in the upper right corner. On the displayed page, specify the product name, protocol, data type, manufacturer, industry, and device type, and click **Create**.
+ - Set **Protocol** to **MQTT**.
 
-为了方便体验，我们提供了一个烟感的产品模型，烟感会上报烟雾值、温度、湿度、烟雾报警、还支持响铃报警命令。以烟感例，体验消息上报、属性上报等功能。
+ - Set **Data Type** to **JSON**. ![](./doc/doc_en/upload_profile_2.png)
 
-1. 访问[设备接入服务](https://www.huaweicloud.com/product/iothub.html)，单击“立即使用”进入设备接入控制台。
+4. After the product is created, click **View** to access its details. On the **Model Definition** page, click **Import Local Profile** to upload the smoke detector product model [smokeDetector](https://support.huaweicloud.com/devg-iothub/resource/smokeDetector_cb097d20d77b4240adf1f33d36b3c278_smokeDetector.zip).
+5. In the navigation pane, choose **Device** > **All Devices**. On the page displayed, click **Individual Register** in the upper right corner. On the page displayed, set device registration parameters and click **OK**.
+ ![](./doc/doc_en/upload_profile_3.png)
+6. After the device is registered, save the node ID, device ID, and secret.
 
-3. 访问管理控制台，查看MQTTS设备接入地址，保存该地址。![](./doc/upload_profile_1.png)
+<h1 id="5">Initializing a Device</h1>
+1. Create a device.
 
-4. 在设备接入控制台选择“产品”，单击右上角的“创建产品”，在弹出的页面中，填写“产品名称”、“协议类型”、“数据格式”、“厂商名称”、“所属行业”、“设备类型”等信息，然后点击右下角“立即创建”。
-
-   - 协议类型选择“MQTT”；
-
-   - 数据格式选择“JSON”。![](./doc/upload_profile_2.png)
-
-5. 产品创建成功后，单击“详情”进入产品详情，在功能定义页面，单击“上传模型文件”，上传烟感产品模型[smokeDetector](https://support.huaweicloud.com/devg-iothub/resource/smokeDetector_cb097d20d77b4240adf1f33d36b3c278_smokeDetector.zip)。
-
-6. 在左侧导航栏，选择“ 设备 > 所有设备”，单击右上角“注册设备”，在弹出的页面中，填写注册设备参数，然后单击“确定”。![](./doc/upload_profile_3.png)
-
-7. 设备注册成功后保存设备标识码、设备ID、密钥。
-
-<h1 id="5">设备初始化</h1>
-
-1. 创建设备。
-
-   设备接入平台时，物联网平台提供密钥和证书两种鉴权方式。
-* 如果您使用1883端口接入平台，需要写入获取的设备ID、密钥。
+   Secret authentication and certificate authentication are available for device access.
+* If you use port 1883 for device access, write into the obtained device ID and secret.
 
    ```c#
    IoTDevice device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 1883, "5eb4cd4049a5ab087d7d4861_demo", "secret");
    ```
 
-   如果使用8883端口接入，需要把平台证书（DigiCertGlobalRootCA.crt.pem）放在根目录，并写入获取的设备ID、密钥。
+   If you use port 8883 for device access, place the platform certificate (**DigiCertGlobalRootCA.crt.pem**) in the root directory and write into the obtained device ID and secret.
 
    ```c#
    IoTDevice device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 8883, "5eb4cd4049a5ab087d7d4861_demo", "secret");
    ```
-   **注：为安全起见，推荐使用8883端口接入平台。**
+   **Note: To ensure secure access, you are advised to use port 8883. **
 
-* 证书模式接入。
+* Access using a certificate.
 
-   华为物联网平台支持设备使用自己的X.509证书接入鉴权。在SDK中使用X.509证书接入时，需自行制作设备证书，并放到调用程序根目录下。SDK调用证书的根目录为\iot-device-feature-test\bin\Debug\certificate。
+   The platform allows devices to use their own X.509 certificates for access authentication. Before using the X.509 certificate for access in the SDK, create a device certificate and place it in the root directory (**\iot-device-feature-test\bin\Debug\certificate**) of the calling program.   
 
-   接入步骤请参考：
+   The access procedures are as follows:
 
-   - 制作设备CA调测证书，详细指导请参考<a href="https://support.huaweicloud.com/usermanual-iothub/iot_01_0055.html" target="_blank">注册X.509证书认证的设备</a>。
+   - Create a device CA commissioning certificate. For details, see <a href="https://support.huaweicloud.com/en-us/usermanual-iothub/iot_01_0055.html" target="_blank">Registering a Device Authenticated by an X.509 Certificate</a>.
 
-   - 制作完调测证书后，参考以下命令转换成C#能接入的设备证书格式：
+   - After the commissioning certificate is created, refer to the following commands to convert its format to the one supported by C# for device access:
 
      ```c#
-     openssl x509 -in deviceCert.pem -out deviceCert.crt //先生成crt格式的证书；
-     openssl pkcs12 -export -out deviceCert.pfx - inkey deviceCert.key -in deviceCert.crt - certfile rootCA.pem；
+     openssl x509 -in deviceCert.pem -out deviceCert.crt // Generate a certificate in CRT format.
+     openssl pkcs12 -export -out deviceCert.pfx - inkey deviceCert.key -in deviceCert.crt - certfile rootCA.pem;
      
-     X509Certificate2 clientCert = new X509Certificate2(@"\\Test01\\deviceCert.pfx", "123456");//必须使用X.509Certificate2
+     X509Certificate2 clientCert = new X509Certificate2(@"\\Test01\\deviceCert.pfx", "123456");// X509Certificate2 must be used.
      ```
 
-   - 参考以下命令，创建设备。
+   - Refer to the following example code to create a device:
 
      ```c#
      string deviceCertPath = Environment.CurrentDirectory + @"\certificate\deviceCert.pfx";
      if (!File.Exists(deviceCertPath))
      {
-         Log.Error("请将设备证书放到根目录！");
+          Log.Error("Place the device certificate in the root directory. ");
      
          return;
      }
      
      X509Certificate2 deviceCert = new X509Certificate2(deviceCertPath, "123456");
      
-     // 使用证书创建设备
+     // Create a device, which accesses the platform using a certificate.
      IoTDevice device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 8883, "5eb4cd4049a5ab087d7d4861_demo", deviceCert);
      ```
 
-3. 调用init接口，建立连接。该接口是阻塞调用，如果建立连接成功会返回0。
+2. Call the **init** function to connect the device and the platform. This is a blocking function and it returns **0** if the device and the platform are connected.
 
    ```c#
    if (device.Init() != 0)
    {
-   	return;
+    return;
    }
    ```
 
-4. 连接成功后，设备和平台之间开始通讯。调用IoT Device 的GetClient接口获取设备客户端，客户端提供了消息、属性、命令等通讯接口。
+3. After the connection is established, the device starts to communicate with the platform. Call the **GetClient** function of the **IoTDevice** class to obtain the device client, which provides communication APIs related to messages, properties, and commands.
 
-<h1 id="6">属性上报</h1>
-
-打开PropertySample类，这个例子中会上报alarm、temperature、humidity、smokeConcentration这四个属性。
+<h1 id="6">Reporting Properties</h1>
+Open the **PropertySample** class. In this example, the **alarm**, **temperature**, **humidity**, and **smokeConcentration** properties are reported.
 
 ```c#
 public void FunPropertySample()
 {
-    // 创建设备
+    // Create a device.
     IoTDevice device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 1883, "5eb4cd4049a5ab087d7d4861_demo", "secret");
 
     if (device.Init() != 0)
     {
-    	return;
+     return;
     }
 
     Dictionary<string, object> json = new Dictionary<string, object>();
     Random rand = new Random();
 
-    // 按照物模型设置属性
+    // Set properties based on the product model.
     json["alarm"] = 1;
     json["temperature"] = (float)rand.NextDouble() * 100.0f;
     json["humidity"] = (float)rand.NextDouble() * 100.0f;
@@ -184,7 +188,7 @@ public void FunPropertySample()
 
     ServiceProperty serviceProperty = new ServiceProperty();
     serviceProperty.properties = json;
-    serviceProperty.serviceId = "smokeDetector"; // serviceId要和物模型一致
+    serviceProperty.serviceId = "smokeDetector"; // **serviceId** must be the same as that defined in the product model.
 
     List<ServiceProperty> properties = new List<ServiceProperty>();
     properties.Add(serviceProperty);
@@ -195,32 +199,31 @@ public void FunPropertySample()
 
 public void OnMessagePublished(RawMessage message)
 {
-	Console.WriteLine("pubSuccessMessage:" + message.Payload);
-	Console.WriteLine();
+ Console.WriteLine("pubSuccessMessage:" + message.Payload);
+ Console.WriteLine();
 }
 
 public void OnMessageUnPublished(RawMessage message)
 {
-	Console.WriteLine("pubFailMessage:" + message.Payload);
-	Console.WriteLine();
+ Console.WriteLine("pubFailMessage:" + message.Payload);
+ Console.WriteLine();
 }
 ```
-修改PropertySample的FunPropertySample函数后直接运行iot-device-feature-test工程，调用FunPropertySample函数上报属性。
+Modify device information and call the **FunPropertySample** function of the **PropertySample** class in the main function to report device properties.
 
-<h1 id="7">消息上报</h1>
+<h1 id="7">Reporting a Message</h1>
+Message reporting refers to the process in which a device reports messages to the platform. In this example, custom topic message reporting and command delivery are also involved.
 
-消息上报是指设备向平台上报消息，本例还包含自定义Topic消息上报，以及自定义Topic命令下发功能。
+1. Call the **GetClient** function of the **IoTDevice** class to obtain the device client.
 
-1. 调用IoTDevice的GetClient接口获取客户端。
+2. Call the **Report** function to report a device message.
 
-2. 调用客户端的Report接口上报设备消息。
-
-   在MessageSample这个例子中上报消息，如果消息上报成功或者失败会进行函数回调：
+   In the **MessageSample** example, a callback function is invoked if a message is reported or fails to report.
 
    ```c#
    public void FunMessageSample()
    {
-       // 创建设备
+       // Create a device.
        IoTDevice device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 1883, "5eb4cd4049a5ab087d7d4861_demo", "secret");
    
        if (device.Init() != 0)
@@ -232,7 +235,7 @@ public void OnMessageUnPublished(RawMessage message)
        device.GetClient().deviceCustomMessageListener = this;
        device.GetClient().messagePublishListener = this;
    
-       // 上报自定义topic消息，注意需要先在平台配置自定义topic,并且topic的前缀已经规定好，固定为：$oc/devices/{device_id}/user/，通过Postman模拟应用侧使用自定义Topic进行命令下发。
+       // Report a custom topic message. Ensure that a custom topic has been configured on the platform, and its prefix is specified and fixed at **$oc/devices/{device_id}/user/**. Use Postman to simulate the scenario that an application uses a custom topic to deliver a command.
        string suf_topic = "wpy";
        device.GetClient().SubscribeTopic(suf_topic);
    
@@ -257,33 +260,32 @@ public void OnMessageUnPublished(RawMessage message)
    }
    ```
 
-3. 选择对应设备，点击“查看”，在设备详情页面启动设备消息跟踪。
+3. Select the device, click **View** to access its details, and start message tracing.
 
-4. 修改MessageSample类的FunMessageSample函数，替换自己的设备参数后启动iot-device-feature-test工程调用MessageSample类。
+4.  Modify device information and call the **FunMessageSample** function of the **MessageSample** class in the main function to report messages.
 
-5. 在设备接入控制台，选择“设备 > 所有设备”查看设备是否在线。![](./doc/upload_profile_4.png)
+5. Access the IoTDA console, choose **Devices** > **All Devices** to check whether the device is online. ![](./doc/doc_en/upload_profile_4.png)
 
-6. 平台收到设备上报的消息。![](./doc/upload_profile_5.png)
+6. View the messages reported by the device. ![](./doc/doc_en/upload_profile_5.png)
 
-<h1 id="8">属性读写</h1>
+<h1 id="8">Reading/Writing Properties</h1>
+Call the functions of the **PropertyListener** interface for setting and obtaining device properties. In the **PropertiesGetAndSetSample** example, the property reading/writing APIs are implemented.
 
-调用客户端的propertyListener方法来设置属性回调接口。在PropertiesGetAndSetSample这个例子中，我们实现了属性读写接口。
+- Writing a property: The SDK receives the property value.
 
-- 写属性处理：实现了属性的写操作，SDK收到属性值；
-
-- 读属性处理：将本地属性值按照接口格式进行拼装；
-- 属性读写接口需要调用Report接口来上报操作结果；
-- 如果设备不支持平台主动到设备读，OnPropertiesGet接口可以空实现；
+- Reading a property: Convert the local property value and return one in JSON format.
+- The property reading/writing APIs need to call the **Report** function to report the operation result.
+- If the platform cannot directly read device properties, the **OnPropertiesGet** function can be left unimplemented.
 
 ```c#
 private IoTDevice device;
 
 /// <summary>
-/// 通过Postman查询和设置平台属性
+/// Query and set platform properties using Postman.
 /// </summary>
 public void FunPropertiesSample()
 {
-    // 创建设备
+    // Create a device.
     device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 8883, "5eb4cd4049a5ab087d7d4861_demo", "secret");
 
     if (device.Init() != 0)
@@ -310,7 +312,7 @@ public void OnPropertiesGet(string requestId, string serviceId)
     Dictionary<string, object> json = new Dictionary<string, object>();
     Random rand = new Random();
 
-    // 按照物模型设置属性
+    // Set properties based on the product model.
     json["alarm"] = 1;
     json["temperature"] = (float)rand.NextDouble() * 100.0f;
     json["humidity"] = (float)rand.NextDouble() * 100.0f;
@@ -318,7 +320,7 @@ public void OnPropertiesGet(string requestId, string serviceId)
 
     ServiceProperty serviceProperty = new ServiceProperty();
     serviceProperty.properties = json;
-    serviceProperty.serviceId = serviceId; // serviceId要和物模型一致
+    serviceProperty.serviceId = serviceId; // **serviceId** must be the same as that defined in the product model.
 
     List<ServiceProperty> properties = new List<ServiceProperty>();
     properties.Add(serviceProperty);
@@ -326,46 +328,44 @@ public void OnPropertiesGet(string requestId, string serviceId)
     device.GetClient().Report(new PubMessage(CommonTopic.TOPIC_SYS_PROPERTIES_GET_RESPONSE + "=" + requestId, properties));
 }
 ```
-<h1 id="9">命令下发</h1>
+<h1 id="9">Delivering a Command</h1>
+Set a listener for receiving commands delivered by the platform. The commands need to be processed via a callback function and the device's responses to the platform's commands are reported.
 
-设置命令监听器用来接收平台下发的命令，在回调接口里，需要对命令进行处理，并上报响应。
-
-在CommandSample例子中实现了命令的处理，收到命令后仅进行控制台显示，然后调用Report上报响应。
+In the **CommandSample** example, a command is processed and the message indicating that the command is received is displayed on the console. Then the **Report** function is called to report the device's response to the command.
 
 ```c#
 private IoTDevice device;
 
 public void FunCommandSample()
 {
-	// 创建设备
-	device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 8883, "5eb4cd4049a5ab087d7d4861_demo", "secret");
+ // Create a device.
+ device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 8883, "5eb4cd4049a5ab087d7d4861_demo", "secret");
 
 if (device.Init() != 0)
 {
-	return;
+ return;
 }
 
-	device.GetClient().commandListener = this;
+ device.GetClient().commandListener = this;
 }
 
 public void OnCommand(string requestId, string serviceId, string commandName, Dictionary<string, object> paras)
 {
-	Console.WriteLine("onCommand, serviceId = " + serviceId);
-	Console.WriteLine("onCommand, name = " + commandName);
-	Console.WriteLine("onCommand, paras =  " + JsonUtil.ConvertObjectToJsonString(paras));
+ Console.WriteLine("onCommand, serviceId = " + serviceId);
+ Console.WriteLine("onCommand, name = " + commandName);
+ Console.WriteLine("onCommand, paras =  " + JsonUtil.ConvertObjectToJsonString(paras));
 
-	////处理命令
+ //// Process a command.
 
-	Dictionary<string, string> dic = new Dictionary<string, string>();
+ Dictionary<string, string> dic = new Dictionary<string, string>();
 dic.Add("result", "success");
 
-	// 发送命令响应
-	device.GetClient().Report(new PubMessage(requestId, new CommandRsp(0, dic)));
+ // Send the device's response to the platform's command.
+ device.GetClient().Report(new PubMessage(requestId, new CommandRsp(0, dic)));
 }
 ```
-<h1 id="10">设备影子</h1>
-
-1. 设备请求获取平台的设备影子数据，用于设备向平台获取设备影子数据。
+<h1 id="10">Using a Device Shadow</h1>
+1. A device requests the platform for the device shadow data.
 
    ```c#
    device.GetClient().deviceShadowListener = this;
@@ -379,51 +379,50 @@ dic.Add("result", "success");
    device.GetClient().Report(new PubMessage(topic, string.Empty));
    ```
 
-2. 设备接收平台返回的设备影子数据，用于接收平台返回的设备影子数据。
+2. The device receives the device shadow data from the platform.
 
    ```c#
    public void OnShadowCommand(string requestId, string message)
    {
-   	Console.WriteLine(requestId);
-   	Console.WriteLine(message);
+    Console.WriteLine(requestId);
+    Console.WriteLine(message);
    }
    ```
 
-<h1 id="11">OTA升级</h1>
+<h1 id="11">Performing an OTA Upgrade</h1>
+1.  Update software by following the instructions provided in <a href=" https://support.huaweicloud.com/en-us/usermanual-iothub/iot_01_0047.html#section3 " target="_blank">Uploading a Software Package</a>.
 
-1. 软件升级。参考<a href=" https://support.huaweicloud.com/usermanual-iothub/iot_01_0047.html#section3 " target="_blank">软件升级指导</a>上传软件包。
+2.  Upgrade firmware by following the instructions provided in <a href=" https://support.huaweicloud.com/en-us/usermanual-iothub/iot_01_0027.html#section3 " target="_blank">Uploading a Firmware Package</a>.
 
-2. 固件升级。参考<a href=" https://support.huaweicloud.com/usermanual-iothub/iot_01_0027.html#section3 " target="_blank">固件升级</a>上传固件包。
-
-3. 平台下发获取版本信息通知
+3. The platform delivers a notification for obtaining the software/firmware version.
 
    ```c#
    /// <summary>
-   /// 接收OTA事件处理
+   /// Receive a notification of processing an OTA event.
    /// </summary>
-   /// <param name="deviceEvent">服务事件</param>
+   /// <param name="deviceEvent">Device event</param>
    public override void OnEvent(DeviceEvent deviceEvent)
    {
        if (otaListener == null)
        {
-       	Log.Info("otaListener is null");
-       	return;
+        Log.Info("otaListener is null");
+        return;
        }
    
        if (deviceEvent.eventType == "version_query")
        {
-       	otaListener.OnQueryVersion();
+        otaListener.OnQueryVersion();
        }
    }
    ```
 
-4. 设备上报软固件版本。
+4. The device reports the software/firmware version.
 
    ```C#
    /// <summary>
-   /// 上报固件版本信息
+   /// Report the firmware version.
    /// </summary>
-   /// <param name="version">固件版本</param>
+   /// <param name="version">Firmware version</param>
    public void ReportVersion(string version)
    {
        Dictionary<string, object> node = new Dictionary<string, object>();
@@ -441,7 +440,7 @@ dic.Add("result", "success");
    }
    ```
 
-5. 平台下发升级通知。
+5. The platform delivers a notification of performing an OTA upgrade.
 
    ```c#
    public void OnNewPackage(OTAPackage otaPackage)
@@ -451,15 +450,15 @@ dic.Add("result", "success");
    
        if (PreCheck(otaPackage) != 0)
        {
-       	Log.Error("preCheck failed");
-       	return;
+        Log.Error("preCheck failed");
+        return;
        }
    
        DownloadPackage();
    }
    ```
 
-6. 设备请求下载包。
+6. The device requests to download the OTA package.
 
    ```c#
    private void DownloadPackage()
@@ -468,10 +467,10 @@ dic.Add("result", "success");
        {
            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
    
-           // 声明HTTP请求
+           // Declare an HTTP request.
            HttpWebRequest myRequest = (HttpWebRequest)HttpWebRequest.Create(new Uri(otaPackage.url));
    
-           // SSL安全通道认证证书
+           // SSL certificate
            ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback((a, b, c, d) => { return true; });
    
            myRequest.ClientCertificates.Add(IotUtil.GetCert(@"\certificate\DigiCertGlobalRootCA.crt.pem"));
@@ -491,7 +490,7 @@ dic.Add("result", "success");
                        {
                            using (BinaryReader br = new BinaryReader(myStream))
                            {
-                               // 向服务器请求,获得服务器的回应数据流
+                               // Send a request to the server for its response data stream.
                                byte[] nbytes = new byte[1024 * 10];
                                int nReadSize = 0;
                                nReadSize = br.Read(nbytes, 0, 1024 * 10);
@@ -529,16 +528,16 @@ dic.Add("result", "success");
    }
    ```
 
-7. 设备上报升级状态。
+7. The device reports the upgrade state.
 
    ```c#
    /// <summary>
-   /// 上报升级状态
+   /// Report the upgrade state.
    /// </summary>
-   /// <param name="result">升级结果</param>
-   /// <param name="progress">升级进度0-100</param>
-   /// <param name="version">当前版本</param>
-   /// <param name="description">具体失败的原因，可选参数</param>
+   /// <param name="result">Upgrade result</param>
+   /// <param name="progress">Upgrade progress 0-100</param>
+   /// <param name="version">Current software or firmware version</param>
+   /// <param name="description">Failure cause (optional)</param>
    public void ReportOtaStatus(int result, int progress, string version, string description)
    {
        Dictionary<string, object> node = new Dictionary<string, object>();
@@ -546,7 +545,7 @@ dic.Add("result", "success");
        node.Add("progress", progress);
        if (description != null)
        {
-       	node.Add("description", description);
+        node.Add("description", description);
        }
    
        node.Add("version", version);
@@ -561,9 +560,8 @@ dic.Add("result", "success");
    }
    ```
 
-<h1 id="12">设备时间同步</h1>
-
-1. 设备向平台发起时间同步请求。  
+<h1 id="12">Synchronizing Device Time</h1>
+1. The device sends a request to the platform for time synchronization.
 
    ```c#
    public void RequestTimeSync()
@@ -582,9 +580,9 @@ dic.Add("result", "success");
    }
    ```
 
-2. 平台向设备发送时间同步响应，携带设备发送时间参数device_send_time。当平台收到时间server_recv_time 后，向设备发送时间server_send_time 。
+2. The platform sends a response carrying the **device_send_time** parameter (recorded by the platform). **server_recv_time** indicates the time when the platform receives the device's request, and **server_send_time** indicates the time when the platform sends a response to the device (both are recorded by the platform).
 
-   假设设备收到的设备侧时间为device_recv_time ，则设备计算自己的准确时间为：
+   Assume that the time recorded by the device is **device_recv_time**, then the time recorded by the platform (the accurate time when the device receives the platform's response) is calculated using the following formula:
 
    (server_recv_time + server_send_time + device_recv_time - device_send_time) / 2
 
@@ -593,7 +591,7 @@ dic.Add("result", "success");
    {
        if (listener == null)
        {
-       	return;
+        return;
        }
    
        if (deviceEvent.eventType == "time_sync_response")
@@ -615,6 +613,393 @@ dic.Add("result", "success");
    }
    ```
 
-<h1 id="13">开源协议</h1>
+<h1 id="13">Object-Oriented Programming</h1>
+Calling device client APIs to communicate with the platform is flexible but requires you to properly configure each API.
 
-- 遵循BSD-3开源许可协议
+The SDK provides a simpler method, that is, object-oriented programming. You can use the product model capabilities provided by the SDK to define device services and call the property reading/writing API to access device services. In this way, the SDK can automatically communicate with the platform to synchronize properties and call commands.
+
+Object-oriented programming enables the developers to focus only on services rather than communication with the platform. This method is much easier than calling client APIs and suitable for most scenarios.  
+
+The **SmokeDetector** example demonstrates the process of object-oriented programming:
+
+1. Define the service class and properties based on the product model. (If there are multiple services, you need to define multiple service classes.)
+
+   ```c#
+   public class SmokeDetectorService : AbstractService
+   {
+    public SmokeDetectorService()
+    {
+     this.SetDeviceService(this);
+    }
+   
+    // Define a property based on the device model. Note that the name and type of the property must be the same as those set for the model.
+    [Property(Name = "alarm", Writeable = true)]
+    public int smokeAlarm { get; set; } = 1;
+   
+    [Property(Name = "smokeConcentration", Writeable = false)]
+    public float concentration
+    {
+     get
+     {
+      return (float)new Random().NextDouble();
+     }
+    }
+   
+    [Property(Writeable = false)]
+    public int humidity { get; set; }
+   	
+    [Property(Writeable = false)]
+    public float temperature
+    {
+     get
+     {
+      // Simulate reading data from a sensor.
+      return (float)new Random().NextDouble();
+     }
+    }
+   }
+   ```
+   The **[Property()]** indicates a property. You can use **Name** to specify the property name, or use the field name.
+
+   **Writeable** can be added to specify whether a property is writeable. **Writeable = false** indicates that the property can only be read. If **Writeable** is not added, then the property can be both read and written.
+
+2. Define service commands. The SDK will automatically call service commands that the device received from the platform.
+
+   The types of input parameters and return values are fixed and cannot be changed. Otherwise, errors may occur during running.
+
+   Here a command named **ringAlarm** is defined.
+
+    /// <summary>
+    /// Define a command. Note that the types of input parameters and return values are fixed and cannot be changed. Otherwise, errors may occur during running.
+    /// The name set for **DeviceCommand** should be the same as that defined in the product model.
+    /// </summary>
+    /// <param name="jsonParas"></param>
+    /// <returns></returns>
+    [DeviceCommand(Name = "ringAlarm")]
+    public CommandRsp alarm(string jsonParas)
+    {
+     JObject obj = JObject.Parse(jsonParas);
+     int value = (int)obj["value"];
+   		
+     return new CommandRsp(0);
+    }
+
+3. Create a service instance via the **FunSmokeDetector** function and add it to a device.
+
+   ```c#
+   // Create a device.
+   IoTDevice device = new IoTDevice(serverUri, port, deviceId, deviceSecret);
+   
+   if (device.Init() != 0)
+   {
+    return;
+   }
+   
+   // Create a device service.
+   SmokeDetectorService smokeDetectorService = new SmokeDetectorService();
+   device.AddService("smokeDetector", smokeDetectorService);
+   ```
+
+4. Enable periodic property reporting.
+
+   ```c#
+   // Enable automatic periodic property reporting.
+   smokeDetectorService.EnableAutoReport(10000);
+   ```
+
+   Note: You can also call the **FirePropertiesChanged** function to manually trigger reporting.
+
+   ```c#
+   smokeDetectorService.FirePropertiesChanged();
+   ```
+
+   Start the iot-device-feature-test project to call the following program:
+
+   ```c#
+   SmokeDetector sd = new SmokeDetector();
+   sd.FunSmokeDetector(serverUri, 8883, deviceId, deviceSecret);
+   ```
+
+   View the log reporting properties.
+   ![](./doc/doc_en/product_model_1.png)
+
+   View the device shadow on the platform.
+
+   ![](./doc/doc_en/product_model_2.png)
+
+   Change the value of **alarm** to **2** on the platform and view the device log that shows the request for property setting is received.
+
+   ![](./doc/doc_en/product_model_3.png)
+
+   Deliver the **ringAlarm** command whose value is **12**.
+
+   View the device log that shows that the **ringAlarm** command is called and a response is reported.
+
+   ![](./doc/doc_en/product_model_4.png)
+
+<h1 id="14">Developing a Gateway</h1>
+Gateways are special devices that provide child device management and message forwarding in addition to the functions of common devices. The SDK provides the **AbstractGateway** class to simplify gateway implementation. This class can obtain and save child device information (with a data persistence API), forward message (with a message forwarding API), and report the child device list, properties, states, and messages.
+
+- **AbstractGateway Class**
+
+  **SimpleGateway** inherits from this class. The child device information can be persisted via the constructor provided by the **AbstractGateway** class, and message forwarding is achieved via the abstract interface implemented by the **SimpleGateway** class.
+
+  ```c#
+  /// <summary>
+  /// Deliver the platform's commands. A gateway forwards the commands to a child device. This function needs to be implemented by **SimpleGateway**.
+  /// </summary>
+  /// <param name="requestId">Request ID</param>
+  /// <param name="command">Command</param>
+  public abstract void OnSubdevCommand(string requestId, Command command);
+  
+  /// <summary>
+  /// Set child device properties. A gateway forwards the platform's request for setting properties to a child device. This function needs to be implemented by **SimpleGateway**.
+  /// </summary>
+  /// <param name="requestId">Request ID</param>
+  /// <param name="propsSet">Property settings</param>
+  public abstract void OnSubdevPropertiesSet(string requestId, PropsSet propsSet);
+  
+  /// <summary>
+  /// Read child device properties. A gateway forwards the platform's request for reading properties to a child device. This function needs to be implemented by **SimpleGateway**.
+  /// </summary>
+  /// <param name="requestId">Request ID</param>
+  /// <param name="propsGet">Property query</param>
+  public abstract void OnSubdevPropertiesGet(string requestId, PropsGet propsGet);
+  
+  /// <summary>
+  /// Deliver the platform's messages to a child device. A gateway forwards the platform's messages to the child device. This function needs to be implemented by **SimpleGateway**.
+  /// </summary>
+  /// <param name="message">Device message</param>
+  public abstract void OnSubdevMessage(DeviceMessage message);
+  ```
+
+- **iot-gateway-demo Code Overview**
+
+  The iot-gateway-demo project implements a simple gateway used for TCP device access based on **AbstractGateway**. The key classes include:
+
+  SimpleGateway: inherits from **AbstractGateway**, manages child devices and forwards the platform's messages.
+
+  StringTcpServer: implements a TCP server based on **DotNetty**. In this example, the child device uses the TCP protocol, and the first message is an authentication message.
+
+  SubDevicesFilePersistence: persists child device information, which is saved in a JSON file and cached in the memory.
+
+  Session: stores the mapping between a device ID and a TCP channel.
+
+- **SimpleGateway Class**
+
+  **Adding or deleting a child device**
+
+  Adding a child device: The child device information has been saved via the **OnAddSubDevices** function of the **AbstractGateway** class. Therefore, the **SimpleGateway** does not need to override the **OnAddSubDevices** function.
+
+  Deleting the child device: Override the **OnDeleteSubDevices** function since you need to modify the persisted child device information and disconnect the current child device. Then, call the **OnDeleteSubDevices** function of the **AbstractGateway** class to delete the child device.  
+
+- **Processing Downstream Messages**
+
+  When receiving a message from the platform, the gateway needs to forward the message to a child device. The messages received from the platform include device messages, property reading/writing responses, and commands.
+
+  - **Device message: **You can obtain the node ID based on the device ID, obtain a session based on the node ID, and obtain a channel based on the session. Then, you can send messages to the channel. You can choose whether to convert messages during forwarding.
+
+    ```c#
+    public override void OnSubdevMessage(DeviceMessage message)
+    {
+     if (message.deviceId == null)
+     {
+      return;
+     }
+    
+        // The platform API provides a device ID, which contains both the product ID and the node ID.
+        // deviceId = productId_nodeId
+     string nodeId = IotUtil.GetNodeIdFromDeviceId(message.deviceId);
+     if (nodeId == null)
+     {
+      return;
+     }
+    
+         // Obtain a session based on the node ID, which is used to obtain a channel.
+     Session session = nodeIdToSesseionDic[nodeId];
+     if (session == null)
+     {
+      Log.Error("session is null ,nodeId:" + nodeId);
+      return;
+     }
+    	
+        // Directly forward the platform's message to a child device.
+     session.channel.WriteAndFlushAsync(message.content);
+     Log.Info("WriteAndFlushAsync " + message.content);
+    }
+    ```
+
+  - **Reading/Writing properties:**
+
+ 
+
+    Setting properties:
+    
+    ```c#
+    public override void OnSubdevPropertiesSet(string requestId, PropsSet propsSet)
+    {
+     if (propsSet.deviceId == null)
+     {
+      return;
+     }
+    
+     string nodeId = IotUtil.GetNodeIdFromDeviceId(propsSet.deviceId);
+     if (nodeId == null)
+     {
+      return;
+     }
+    
+     Session session = nodeIdToSesseionDic[nodeId];
+     if (session == null)
+     {
+      Log.Error("session is null ,nodeId:" + nodeId);
+      return;
+     }
+    
+     // Convert an object to a string and send it to a child device. In actual scenarios, codec conversion may be required.
+     session.channel.WriteAndFlushAsync(JsonUtil.ConvertObjectToJsonString(propsSet));
+    
+     // To simplify the processing, directly return the child device's response to the platform's request for setting properties. It could be better to return a response after the child device completes processing.
+     GetClient().RespondPropsSet(requestId, IotResult.SUCCESS);
+    
+     Log.Info("WriteAndFlushAsync " + propsSet);
+    }
+    ```
+    
+    Querying properties:
+    
+    ```c#
+    public override void OnSubdevPropertiesGet(string requestId, PropsGet propsGet)
+    {
+     // It is not recommended that the platform directly read child device properties. Here a failure message is returned.
+     Log.Error("not support onSubdevPropertiesGet");
+     GetClient().RespondPropsSet(requestId, IotResult.FAIL);
+    }
+    ```
+
+  - **Commands: **The processing procedure is similar to that of a message. In actual scenarios, different codecs may be required.
+
+    ```c#
+    public override void OnSubdevCommand(string requestId, Command command)
+    {
+     if (command.deviceId == null)
+     {
+      return;
+     }
+    
+     string nodeId = IotUtil.GetNodeIdFromDeviceId(command.deviceId);
+     if (nodeId == null)
+     {
+      return;
+     }
+    
+     Session session = nodeIdToSesseionDic[nodeId];
+     if (session == null)
+     {
+      Log.Error("session is null ,nodeId is " + nodeId);
+    
+      return;
+     }
+    
+     // Convert an object to a string and send it to a child device. In actual scenarios, codec conversion may be required.
+     session.channel.WriteAndFlushAsync(JsonUtil.ConvertObjectToJsonString(command));
+    
+     // To simplify the processing, directly return the child device's response to the platform's command. It could be better to return a response after the child device completes processing.
+     GetClient().RespondCommand(requestId, new CommandRsp(0));
+     Log.Info("WriteAndFlushAsync " + command);
+    }
+    ```
+
+- **Processing Upstream Messages**
+
+  Process the upstream message via the **channelRead0** function of the **StringTcpServer** class. If no session exists, then create one.
+
+  A session fails to create if the child device information does not exist.
+
+  ```c#
+  protected override void ChannelRead0(IChannelHandlerContext ctx, string msg)
+  {
+   IChannel incoming = ctx.Channel;
+   Log.Info("channelRead0" + incoming.RemoteAddress + " msg :" + msg);
+  
+   // Create a session if the initial message is sent to a channel by a child device.
+   Session session = simpleGateway.GetSessionByChannel(incoming.Id.AsLongText());
+   if (session == null)
+   {
+    string nodeId = msg;
+    session = simpleGateway.CreateSession(nodeId, incoming);
+  
+    // The session fails to create.
+    if (session == null)
+    {
+     Log.Info("close channel");
+     ctx.CloseAsync().Wait();
+    }
+    else
+    {
+     Log.Info(session.deviceId + " ready to go online.");
+     simpleGateway.ReportSubDeviceStatus(session.deviceId, "ONLINE");
+    }
+   }
+  }
+  ```
+
+  If a session exists, then messages can be forwarded.
+
+  ```c#
+  else
+  {
+   // After receiving the child device data, a gateway reports the data to the platform.
+   // Both the message and property reporting are demonstrated. Choose either one of them in practice.
+  
+   // Report a child device message by calling **reportSubDeviceMessage**.
+   DeviceMessage deviceMessage = new DeviceMessage(msg);
+   deviceMessage.deviceId = session.deviceId;
+   simpleGateway.ReportSubDeviceMessage(deviceMessage);
+  
+   // Report child device properties by calling **reportSubDeviceProperties**. The service ID and field name should be the same as those of the product model.
+   ServiceProperty serviceProperty = new ServiceProperty();
+   serviceProperty.serviceId = "parameter";
+   Dictionary<string, object> props = new Dictionary<string, object>();
+  
+   // Fix the property values here. In practice, they are set based on the data reported by a child device.
+   props.Add("alarm", 1);
+   props.Add("temperature", 2);
+   serviceProperty.properties = props;
+  
+   List<ServiceProperty> services = new List<ServiceProperty>();
+   services.Add(serviceProperty);
+   simpleGateway.ReportSubDeviceProperties(session.deviceId, services);
+  }
+  ```
+
+  So far, the key code of a gateway has been introduced. For more information, see the source code. The demo is open-source and can be extended as required. For example, you can modify the information persistence mode, add message format conversion during forwarding, and support other device access protocols.
+
+- **Using a Gateway**
+
+  1. Register a gateway with the platform.
+
+  2. Modify the device information in the iot-device-feature-test project and call the following function in the main function:
+
+     ```c#
+     new StringTcpServer(serverUri, 8883, deviceId, deviceSecret);
+     ```
+
+  3. Start the iot-device-feature-test project to call the **StringTcpServer** class. After the gateway is online on the platform, add a child device. ![](./doc/doc_en/gateway_1.png)
+
+     At this time, the following information is displayed in the log of the gateway:![](./doc/doc_en/gateway_2.png)
+
+  4. Start the iot-tcp-device-test project to call the **TcpDevice** class. After the connection between the child device and the platform is established, enter the node ID of the child device. ![](./doc/doc_en/gateway_3.png)
+
+  5. Check whether the child device is online on the platform. ![](./doc/doc_en/gateway_4.png)
+
+  6. The child device reports messages.![](./doc/doc_en/gateway_5.png)
+
+      The log shows that messages are reported.![](./doc/doc_en/gateway_6.png)
+
+  7. View the message trace.
+
+      Find the gateway on the platform, and click **View** to open its details, and then click **Message Trace**. The child device continues to send data. After a while, the message trace information is displayed.![](./doc/doc_en/gateway_7.png)
+
+<h1 id="15">Open-Source Protocols</h1>
+- Complying with the BSD-3 open-source license agreement

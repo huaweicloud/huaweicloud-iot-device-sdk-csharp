@@ -160,6 +160,7 @@ namespace IoT.Gateway.Demo
             if (session == null)
             {
                 Log.Error("session is null ,nodeId:" + nodeId);
+
                 return;
             }
 

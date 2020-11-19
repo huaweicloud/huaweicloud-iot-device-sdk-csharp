@@ -161,6 +161,40 @@ namespace IoT.SDK.Device.Gateway
             GetClient().ReportEvent(deviceEvent);
         }
 
+        /// <summary>
+        /// 设备侧添加子设备
+        /// </summary>
+        /// <param name="subDeviceInfo">待新增的子设备信息列表，单次增加最大不超过50个设备</param>
+        public void ReportAddSubDevice(List<DeviceInfo> subDeviceInfo)
+        {
+            DeviceEvent deviceEvent = new DeviceEvent();
+            deviceEvent.serviceId = "$sub_device_manager";
+            deviceEvent.eventTime = IotUtil.GetTimeStamp();
+            deviceEvent.eventType = "add_sub_device_request";
+            
+            Dictionary<string, object> para = new Dictionary<string, object>();
+            para.Add("devices", subDeviceInfo);
+            deviceEvent.paras = para;
+            GetClient().ReportEvent(deviceEvent);
+        }
+
+        /// <summary>
+        /// 设备侧删除子设备
+        /// </summary>
+        /// <param name="devicesId">待删除的子设备（设备id）列表，单次删除最大不超过50个设备</param>
+        public void ReportDeleteSubDevice(List<string> devicesId)
+        {
+            DeviceEvent deviceEvent = new DeviceEvent();
+            deviceEvent.serviceId = "$sub_device_manager";
+            deviceEvent.eventTime = IotUtil.GetTimeStamp();
+            deviceEvent.eventType = "delete_sub_device_request";
+
+            Dictionary<string, object> para = new Dictionary<string, object>();
+            para.Add("devices", devicesId);
+            deviceEvent.paras = para;
+            GetClient().ReportEvent(deviceEvent);
+        }
+
         public override void OnEvent(DeviceEvents deviceEvents)
         {
             base.OnEvent(deviceEvents);
@@ -192,6 +226,25 @@ namespace IoT.SDK.Device.Gateway
                     OnDeleteSubDevices(subDevicesInfo);
                 }
             }
+        }
+
+        /// <summary>
+        /// 命令处理回调
+        /// </summary>
+        /// <param name="requestId">请求id</param>
+        /// <param name="command">命令</param>
+        public override void OnCommand(string requestId, Command command)
+        {
+            // 子设备的
+            if (command.deviceId != null && command.deviceId != this.deviceId)
+            {
+                this.OnSubdevCommand(requestId, command);
+
+                return;
+            }
+
+            // 网关的
+            base.OnCommand(requestId, command);
         }
 
         /// <summary>

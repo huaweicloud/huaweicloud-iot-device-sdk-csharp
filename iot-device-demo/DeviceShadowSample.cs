@@ -32,7 +32,7 @@ namespace IoT.Device.Demo
 
             X509Certificate2 deviceCert = new X509Certificate2(deviceCertPath, "123456");
 
-            // 使用证书创建设备
+            // 使用证书创建设备，X509证书接入
             device = new IoTDevice(serverUri, port, deviceId, deviceCert);
 
             if (device.Init() != 0)
