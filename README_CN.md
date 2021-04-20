@@ -57,7 +57,7 @@ SDK面向运算、存储能力较强的嵌入式终端设备，开发者通过�
 
 **SDK目录结构**
 
-iot-device-sdk-java：sdk代码
+iot-device-sdk-sharp：sdk代码
 
 iot-device-demo：普通直连设备的demo代码
 
