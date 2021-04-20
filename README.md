@@ -57,7 +57,7 @@ The SDK is designed for embedded devices with powerful computing and storage cap
 
 **SDK Directory Structure**
 
-iot-device-sdk-java: SDK code
+iot-device-sdk-csharp: SDK code
 
 iot-device-demo: demo code of a common directly connected device
 
