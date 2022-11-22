@@ -6,7 +6,7 @@ using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
 using NLog;
 
-namespace IoT.Gateway.Demo
+namespace IoT.TCP.Device.Test
 {
     public class TcpDevice
     {
