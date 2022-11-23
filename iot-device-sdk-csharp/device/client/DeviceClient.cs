@@ -479,7 +479,7 @@ namespace IoT.SDK.Device.Client
             deviceCustomMessageListener.OnCustomMessageCommand(message.Payload);
         }
 
-		public virtual void ReportEvent(string deviceId, DeviceEvent evnt)
+        public virtual void ReportEvent(string deviceId, DeviceEvent evnt)
         {
             return;
         }
