@@ -36,11 +36,14 @@
 
 - [网关场景开发](#14)
 
-- [开源协议](#15)
+- [泛协议开发](#15)
+
+- [开源协议](#16)
 
   <!-- /TOC -->
 
 <h1 id="0">修订记录</h1>
++ 文档版本03 支持泛协议接入功能（2022-11-22）
 + 文档版本02 增加网关和物模型功能（2020-10-25）
 + 文档版本01 第一次正式发布（2020-08-24）
 
@@ -57,7 +60,7 @@ SDK面向运算、存储能力较强的嵌入式终端设备，开发者通过�
 
 **SDK目录结构**
 
-iot-device-sdk-java：sdk代码
+iot-device-sdk-csharp：sdk代码
 
 iot-device-demo：普通直连设备的demo代码
 
@@ -66,6 +69,10 @@ iot-gateway-demo：网关设备的demo代码
 iot-device-feature-test：调用demo程序的入口工程
 
 iot-tcp-device-test：子设备实例启动工程
+
+iot-bridge-sdk：泛协议sdk代码
+
+iot-bridge-sample-tcp-protocol：泛协议demo代码
 
 **第三方类库使用版本**
 
@@ -80,6 +87,10 @@ NLog：v4.7
 DotNetty.Codecs：v0.6.0
 
 DotNetty.Transport：v0.6.0
+
+DotNetty.Handlers: v0.6.0
+
+Microsoft.Extensions.Caching.Memory：v6.0.1
 
 <h1 id="3">准备工作</h1>
 *  已安装Microsoft Visual Studio 2017
@@ -1004,5 +1015,197 @@ SmokeDetector例子演示了如何面向物模型编程：
 
      在平台上找到网关，选择 设备详情-消息跟踪，打开消息跟踪。继续让子设备发送数据，等待片刻后看到消息跟踪：![](./doc/doc_cn/gateway_7.png)
 
-<h1 id="15">开源协议</h1>
+
+<h1 id="15">泛协议开发</h1>
+
+目前平台支持基于MQTT/HTTP/LwM2M等标准协议接入，为解决用户自定义协议设备快速接入IoT平台的诉求。华为云IoT提供泛协议适配机制，您可使用泛协议对接SDK，快速构建协议插件，进行设备或平台与IoT的双向数据通信。
+
+- **业务流程**
+  ![](./doc/doc_cn/generic_sdk_1.png)
+
+- **SDK接口说明**
+
+  **泛协议SDK提供监听平台下行数据的接口说明**
+  | 接口 | 说明 |
+  | :---- | :---- |
+  | BridgeCommandListener | 平台命令下发监听接口。泛协议插件可以通过该接口将平台的下行命令转发给第三方协议设备。 |
+  | BridgeDeviceMessageListener | 平台消息下发监听接口。泛协议插件可以通过该接口将平台的下行消息转发给第三方协议设备。 |
+  | BridgeDeviceDisConnListener | 平台通知网桥断开设备连接监听接口。泛协议插件可以通过该接口主动断开第三方协议设备的连接。 |
+  | LoginListener | 网桥等待设备登录结果的监听接口。泛协议插件可以通过该接口监听设备是否登录成功。 |
+  | LogoutListener | 网桥等待设备登出结果的监听接口。泛协议插件可以通过该接口监听设备是否登出成功。 |
+
+  **泛协议SDK提供的相关类说明**
+  | 类 | 说明 |
+  | :---- | :---- |
+  | BridgeClientConf | 泛协议SDK客户端配置类（包括泛协议SDK连接平台的地址、网桥ID、秘钥等参数） |
+  | BridgeBootstrap | 泛协议SDK启动初始化类。 |
+  | BridgeClient | 泛协议SDK网桥客户端实现类，实现同平台的通信（设备登录、设备消息上报、设备属性上报、设备登出等） |
+  
+- **项目结构说明**
+  
+  **项目结构图**
+
+  ![](./doc/doc_cn/generic_sdk_2.png)
+
+  **类相关说明**
+
+  | 类名称 | 描述 |
+  | :---- | :---- |
+  | Program | 主启动类。 |
+  | BridgeService | 网桥初始化：初始化同IoT平台的连接，设置平台下行数据监听 |
+  | TcpServer | TCP协议服务端启动类。开启TCP协议监听端口，接收设备上报到服务端的消息。 |
+  | MessageDecoder | 上行数据的消息解码，将TCP原始码流转换为具体JSON对象。 |
+  | MessageEncoder | 下行数据的消息编码，将对象数据转换为TCP原始码流。 |
+  | UpLinkHandler | 设备上行数据处理类。把TCP协议数据转成平台格式数据，并调用SDK接口进行上报 |
+  | DownLinkHandler | IoT平台下发数据处理类。将平台下发数据转换为TCP协议数据，并下发给设备。 |
+  | DeviceSessionManger | 设备会话管理。管理设备同服务端的连接。 |
+
+- **初始化网桥SDK**
+  
+  创建BridgeBootstrap对象实例，调用InitBridge方法，在该方法中会读取环境变量的配置信息，并同IoT平台建立网桥连接。
+  **环境变量说明**
+  | 环境变量名称 | 参数说明 | 样例 |
+  | :---- | :---- | :---- |
+  | ENV_NET_BRIDGE_ID | 网桥ID | bridge001 |
+  | ENV_NET_BRIDGE_SECRET | 网桥秘钥 | ******** |
+  | ENV_NET_BRIDGE_SERVER_IP | IoTDA平台地址 | *****.iot-mqtts.cn-north-4.myhuaweicloud.com |
+  | ENV_NET_BRIDGE_SERVER_PORT | IoTDA平台泛协议接入端口号 | 8883 |
+
+  初始化成功后，需要设置平台下行数据的监听器，监听平台的下行数据。
+
+  代码样例：
+  ```c#
+  public void Init()
+  {
+      // 网桥启动初始化
+      BridgeBootstrap bridgeBootstrap = new BridgeBootstrap();
+
+      // 从环境变量获取配置进行初始化
+      bridgeBootstrap.InitBridge();
+
+      bridgeClient = bridgeBootstrap.GetBridgeDevice().bridgeClient;
+
+      // 设置平台下行数据监听器
+      DownLinkHandler downLinkHandler = new DownLinkHandler(bridgeClient);
+      bridgeClient.bridgeCommandListener = downLinkHandler;   // 设置平台命令下发监听器
+      bridgeClient.bridgeDeviceMessageListener = downLinkHandler;    // 设置平台消息下发监听器
+      bridgeClient.bridgeDeviceDisConnListener = downLinkHandler;   // 设置平台通知网桥主动断开设备连接的监听器
+  }
+  ```
+- **设备登录上线**
+  
+  设备登录上线的实现样例如下：
+  ```c#
+  private void Login(IChannel channel, BaseMessage message)
+  {
+
+    if (!(message is DeviceLoginMessage)) {
+        return;
+    }
+
+    string deviceId = message.msgHeader.deviceId;
+    string secret = ((DeviceLoginMessage)message).secret;
+    DeviceSession deviceSession = new DeviceSession();
+
+    int resultCode = BridgeService.GetBridgeClient().LoginSync(deviceId, secret, 5000);
+
+    // 登录成功保存会话信息
+    if (resultCode == 0) {
+        deviceSession.deviceId = deviceId;
+        deviceSession.channel = channel;
+        DeviceSessionManger.GetInstance().CreateSession(deviceId, deviceSession);
+        NettyUtils.SetDeviceId(channel, deviceId);
+    }
+  }
+  ```
+  设备上线时，需要从原始设备消息中解析出鉴权信息（设备ID和秘钥），再调用SDK提供的login接口向平台发起登录请求，平台收到设备的login请求后，会对设备的鉴权信息进行认证，认证通过后会通过返回码告知网桥SDK设备的登录结果。您需要根据登录结果对设备进行记录会话信息、给设备返回响应等处理。
+
+- **设备数据上报**
+  
+  设备登录成功后，收到设备的上行数据时，可调用SDK的reportProperties将解码后的数据上报到IoT平台。
+
+  代码样例参考：
+  ```c#
+  private void ReportProperties(IChannel channel, BaseMessage message)
+  {
+      String deviceId = message.msgHeader.deviceId;
+      DeviceSession deviceSession = DeviceSessionManger.GetInstance().GetSession(deviceId);
+      if (deviceSession == null) {
+          Log.Warn("device={} is not login", deviceId);
+          SendResponse(channel, message, 1);
+          return;
+      }
+
+      ServiceProperty serviceProperty = new ServiceProperty();
+      serviceProperty.serviceId = "Location";
+      serviceProperty.properties = JsonUtil.ConvertJsonStringToObject<Dictionary<string, object>>(JsonUtil.ConvertObjectToJsonString(message));
+
+      List<ServiceProperty> properties = new List<ServiceProperty>();
+      properties.Add(serviceProperty);
+      // 调用网桥reportProperties接口，上报设备属性数据
+      BridgeService.GetBridgeClient().ReportProperties(deviceId, properties);
+  }
+  ```
+- **平台指令下发**
+  
+  网桥在初始化时向SDK注册了BridgeCommandListener的监听。当有下行指令时，网桥SDK就会回调BridgeCommandListener的OnCommand方法。您可在OnCommand中对平台的下行指令进行处理。
+
+  代码样例参考：
+  ```c#
+  public void OnCommand(string deviceId, string requestId, BridgeCommand bridgeCommand)
+  {
+    Log.Info("onCommand deviceId={0}, requestId={1}, bridgeCommand={2}", deviceId, requestId, bridgeCommand);
+    DeviceSession session = DeviceSessionManger.GetInstance().GetSession(deviceId);
+    if (session == null) {
+        Log.Warn("device={0} session is null", deviceId);
+        return;
+    }
+
+    // 设置位置上报的周期
+    if (bridgeCommand.command.commandName == "FREQUENCY_LOCATION_SET") {
+        processLocationSetCommand(session, requestId, bridgeCommand);
+    }
+    bridgeClient.RespondCommand(deviceId, requestId, new CommandRsp(CommandRsp.SUCCESS));
+  }
+  ````
+- **设备离线**
+
+  网桥检查到设备到服务端的长连接断开时，需要调用SDK的logout接口通知平台设备离线。
+
+  代码样例参考：
+  ```c#
+  public override void ChannelInactive(IChannelHandlerContext ctx)
+  {
+    string deviceId = NettyUtils.GetDeviceId(ctx.Channel);
+    if (deviceId == null) {
+        return;
+    }
+    DeviceSession deviceSession = DeviceSessionManger.GetInstance().GetSession(deviceId);
+    if (deviceSession == null) {
+        return;
+    }
+
+    // 调用网桥的logout接口，通知平台设备离线
+    BridgeService.GetBridgeClient().LogoutAsync(deviceId, Guid.NewGuid().ToString());
+    DeviceSessionManger.GetInstance().DeleteSession(deviceId);
+
+    ctx.CloseAsync();
+  }
+  ```
+- **测试验证**
+  
+  - **获取网桥接入信息**
+    
+    修改对应环境变量ENV_NET_BRIDGE_ID、ENV_NET_BRIDGE_SECRET、ENV_NET_BRIDGE_SERVER_IP、ENV_NET_BRIDGE_SERVER_PORT
+  - **创建产品和设备**
+  - **功能验证**
+    
+    均可参考https://support.huaweicloud.com/usermanual-iothub/iot_02_3.html实现
+
+    启动TCP：运行iot-tcp-device-test工程模拟设备同网桥建立TCP连接，并发送登录请求。
+
+
+    
+
+<h1 id="16">开源协议</h1>
 - 遵循BSD-3开源许可协议
