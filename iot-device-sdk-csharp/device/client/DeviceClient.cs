@@ -83,7 +83,7 @@ namespace IoT.SDK.Device.Client
 
         public ConnectListener connectListener { get; set; }
 
-        public void OnMessageReceived(RawMessage message)
+        public virtual void OnMessageReceived(RawMessage message)
         {
             string topic = message.Topic;
             try

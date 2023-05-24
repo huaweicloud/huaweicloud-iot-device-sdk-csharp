@@ -47,6 +47,8 @@ namespace IoT.SDK.Bridge.Clent {
     public class BridgeClient : DeviceClient {
         private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
+        Dictionary<string, RawMessageListener> dict;
+
         // bridgeClient相关请求topic
 
         private static readonly string BRIDGE_LOGIN = "$oc/bridges/{0}/devices/{1}/sys/login/request_id={2}";
@@ -119,6 +121,16 @@ namespace IoT.SDK.Bridge.Clent {
         {
             bridgeId = clientConf.DeviceId;
             requestIdCache = new RequestIdCache();
+
+            dict = new Dictionary<string, RawMessageListener>();
+            dict.Add(MESSAGE_DOWN_TOPIC, new BridgeMessageHandler(this));
+            dict.Add(COMMAND_DOWN_TOPIC, new BridgeCommandHandler(this));
+            dict.Add(LOGIN_RESP_TOPIC, new DeviceLoginHandler(this));
+            dict.Add(LOGOUT_RESP_TOPIC, new DeviceLogoutHandler(this));
+            dict.Add(BRIDGE_RESET_DEVICE_SECRET_RESP, new SecretResetHandler(this));
+            dict.Add(BRIDGE_DEVICE_DISCONNECT, new DeviceDisConnHandler(this));
+            dict.Add(PROPERTY_SET_TOPIC, new BridgePropertySetHandler(this));
+            dict.Add(PROPERTY_GET_TOPIC, new BridgePropertyGetHandler(this));
         }
 
         private PubMessage GenerateLoginMsg(string deviceId, string password, string requestId)
@@ -138,7 +150,6 @@ namespace IoT.SDK.Bridge.Clent {
 
         public void LoginAsync(string deviceId, string password, string requestId)
         {
-            SubscribeDeviceTopic(deviceId);
             PubMessage msg = GenerateLoginMsg(deviceId, password, requestId);
             Report(msg);
         }
@@ -152,7 +163,6 @@ namespace IoT.SDK.Bridge.Clent {
 
         public int LoginSync(string deviceId, string password, int millisecondTimeout)
         {
-            SubscribeDeviceTopic(deviceId);
             string requestId = Guid.NewGuid().ToString();
             TaskCompletionSource<int> future = new TaskCompletionSource<int>();
             PubMessage msg = GenerateLoginMsg(deviceId, password, requestId);
@@ -234,35 +244,24 @@ namespace IoT.SDK.Bridge.Clent {
             Report(new PubMessage(topic, JsonUtil.ConvertObjectToJsonString(iotResult)));
         }
 
-        private void SubscribeDeviceTopic(string deviceId)
+        public override void OnMessageReceived(RawMessage message)
         {
-            List<MqttTopicFilter> listTopic = new List<MqttTopicFilter>();
-            string topicMsgDown = string.Format(BRIDGE_PRE_HEAD_TOPIC, bridgeId, deviceId) + MESSAGE_DOWN_TOPIC;
-            SubscribeCompleteTopic(topicMsgDown, MESSAGE_DOWN_TOPIC, new BridgeMessageHandler(this));
+            string topic = message.Topic;
+            RawMessageListener listener = null;
 
-            string topicCommand = string.Format(BRIDGE_PRE_HEAD_TOPIC, bridgeId, deviceId) + COMMAND_DOWN_TOPIC;
-            SubscribeCompleteTopic(topicCommand, COMMAND_DOWN_TOPIC, new BridgeCommandHandler(this));
-
-            var topicLogin = string.Format(BRIDGE_PRE_HEAD_TOPIC, bridgeId, deviceId) + LOGIN_RESP_TOPIC;
-            SubscribeCompleteTopic(topicLogin, LOGIN_RESP_TOPIC, new DeviceLoginHandler(this));
-
-            var topicLogout = string.Format(BRIDGE_PRE_HEAD_TOPIC, bridgeId, deviceId) + LOGOUT_RESP_TOPIC;
-            SubscribeCompleteTopic(topicLogout, LOGOUT_RESP_TOPIC, new DeviceLogoutHandler(this));
-
-            var topicRstSecret = string.Format(BRIDGE_PRE_HEAD_TOPIC, bridgeId, deviceId) + BRIDGE_RESET_DEVICE_SECRET_RESP;
-            SubscribeCompleteTopic(topicRstSecret, BRIDGE_RESET_DEVICE_SECRET_RESP, new SecretResetHandler(this));
-
-            var topicDisConnect = string.Format(BRIDGE_PRE_HEAD_TOPIC, bridgeId, deviceId) + BRIDGE_DEVICE_DISCONNECT;
-            SubscribeCompleteTopic(topicDisConnect, BRIDGE_DEVICE_DISCONNECT, new DeviceDisConnHandler(this));
-
-            var topicPropertySet = string.Format(BRIDGE_PRE_HEAD_TOPIC, bridgeId, deviceId) + PROPERTY_SET_TOPIC;
-            SubscribeCompleteTopic(topicPropertySet, PROPERTY_SET_TOPIC, new BridgePropertySetHandler(this));
-
-            var topicPropertyGet = string.Format(BRIDGE_PRE_HEAD_TOPIC, bridgeId, deviceId) + PROPERTY_GET_TOPIC;
-            SubscribeCompleteTopic(topicPropertyGet, PROPERTY_GET_TOPIC, new BridgePropertyGetHandler(this));
-
+            if (!topic.Contains(BRIDGE_TOPIC_KEYWORD)) {
+                Log.Error("The topic doesn't contain oc/bridges");
+                return;
+            }
+            foreach (var listenItem in dict) {
+                if (topic.Contains(listenItem.Key)) {
+                    listener = listenItem.Value;
+                    listener.OnMessageReceived(message);
+                    return;
+                }
+            }
+            Log.Error("unknown topic: " + topic);
         }
-
     }
 }
 
