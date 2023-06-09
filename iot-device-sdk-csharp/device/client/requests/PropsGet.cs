@@ -34,7 +34,7 @@ using Newtonsoft.Json;
 namespace IoT.SDK.Device.Client.Requests
 {
     /// <summary>
-    /// 写属性操作
+    /// Obtains properties.
     /// </summary>
     public class PropsGet
     {

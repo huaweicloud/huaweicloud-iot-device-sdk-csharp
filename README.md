@@ -6,7 +6,7 @@ English | [简体中文](README_CN.md)
 
 <!-- TOC -->
 
-- [Change History](#0)
+- [Version Updates](#0)
 
 - [About This Document](#1)
 
@@ -40,9 +40,17 @@ English | [简体中文](README_CN.md)
 
   <!-- /TOC -->
 
-<h1 id="0">Change History</h1>
-+ Document version 02: The gateway and product model functions are added (2020-10-25).
-+ Issue 01 First official release (2020-08-24)
+<h1 id="0">Version Updates</h1>
+
+
+| Version | Change Type | Function Description                                                 |
+| ------ | -------- | ------------------------------------------------------------ |
+| 1.3.1 | bug fix              | fix problems such as null pointer exception, unreleased MQTT object                                                                       |
+| 1.3.0  | New Function   | Software and firmware packages can be upgraded by OBS                 |
+| 1.2.0  | New Function | Generic protocol function added |
+| 1.1.1  | Function Enhancement   | Subdevices can be deleted from gateways and descriptions in both Chinese and English are improved.                                  |
+| 1.1.0  | New Function | The gateway and product model functions are added |
+| 1.0.0  | Publishment | Provides basic device access capabilities. The SDK is preconfigured with device access addresses and Huawei IoT platform CA certificates. |
 
 <h1 id="1">About This Document</h1>
 This document uses an example to describe how to use iot-device-sdk-cSharp (SDK for short) to quickly connect MQTT devices to the HUAWEI CLOUD IoT platform.

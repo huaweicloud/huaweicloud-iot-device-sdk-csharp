@@ -53,5 +53,7 @@ namespace IoT.SDK.Device.Config
         public static readonly string TOPIC_SYS_EVENTS_DOWN = "$oc/devices/{0}/sys/events/down";
         public static readonly string TOPIC_SYS_EVENTS_UP = "$oc/devices/{0}/sys/events/up";
         public static readonly string TOPIC_SYS_GATEWAY_SUB_DEVICES = "$oc/devices/{0}/sys/gateway/sub_devices/properties/report";
+        public static readonly string TOPIC_SYS_BOOTSTRAP_DOWN = "$oc/devices/{0}/sys/bootstrap/down";
+        public static readonly string TOPIC_SYS_BOOTSTRAP_UP = "$oc/devices/{0}/sys/bootstrap/up";
     }
 }

@@ -41,7 +41,7 @@ namespace IoT.SDK.Device.Service
     public class DeviceCommand : Attribute
     {
         /// <summary>
-        /// 命令名，不提供默认为方法名
+        /// Indicates the command name. If it is NULL, the method name is used by default.
         /// </summary>
         public string Name { get; set; } = string.Empty;
     }

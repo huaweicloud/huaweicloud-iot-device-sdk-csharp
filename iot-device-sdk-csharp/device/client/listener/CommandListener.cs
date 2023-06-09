@@ -35,12 +35,12 @@ namespace IoT.SDK.Device.Client.Listener
     public interface CommandListener
     {
         /// <summary>
-        /// 命令处理
+        /// Called when a command is processed.
         /// </summary>
-        /// <param name="requestId">请求ID</param>
-        /// <param name="serviceId">服务ID</param>
-        /// <param name="commandName">命令名</param>
-        /// <param name="paras">命令参数</param>
+        /// <param name="requestId">Indicates the request ID.</param>
+        /// <param name="serviceId">Indicates the service ID.</param>
+        /// <param name="commandName">Indicates the command name.</param>
+        /// <param name="paras">Indicates the command parameters.</param>
         void OnCommand(string requestId, string serviceId, string commandName, Dictionary<string, object> paras);
     }
 }

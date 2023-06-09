@@ -33,14 +33,14 @@ using IoT.SDK.Device.Client.Requests;
 namespace IoT.SDK.Device.Client.Listener
 {
     /// <summary>
-    /// 命令监听器，用于接收平台下发的命令
+    /// Provides a listener to listen to commands delivered by the platform.
     /// </summary>
     public interface DeviceMessageListener
     {
         /// <summary>
-        /// 处理平台下发的设备消息
+        /// Called when a device message delivered by the platform is received.
         /// </summary>
-        /// <param name="deviceMessage">设备消息内容</param>
+        /// <param name="deviceMessage">Indicates the message content.</param>
         void OnDeviceMessage(DeviceMessage deviceMessage);
     }
 }

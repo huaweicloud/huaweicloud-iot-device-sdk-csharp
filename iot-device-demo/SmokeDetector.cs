@@ -6,7 +6,7 @@ namespace IoT.Device.Demo
     {
         public void FunSmokeDetector(string serverUri, int port, string deviceId, string deviceSecret)
         {
-            // 创建设备
+            // Creates a device.
             IoTDevice device = new IoTDevice(serverUri, port, deviceId, deviceSecret);
 
             if (device.Init() != 0)
@@ -14,11 +14,11 @@ namespace IoT.Device.Demo
                 return;
             }
 
-            // 创建设备服务
+            // Creates a service.
             SmokeDetectorService smokeDetectorService = new SmokeDetectorService();
             device.AddService("smokeDetector", smokeDetectorService);
 
-            // 启动自动周期上报
+            // Enables automatic, periodic reporting.
             smokeDetectorService.EnableAutoReport(10000);
 
             smokeDetectorService.FirePropertiesChanged();

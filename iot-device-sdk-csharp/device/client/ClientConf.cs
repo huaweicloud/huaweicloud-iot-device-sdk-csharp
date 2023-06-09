@@ -35,45 +35,50 @@ namespace IoT.SDK.Device.Client
 {
     public class ClientConf
     {
-        // 直连模式
+        // Directly connected device access mode
         public static readonly int CONNECT_OF_NORMAL_DEVICE_MODE = 0;
 
-        // 网桥模式
+        // Bridge Device Access Mode
         public static readonly int CONNECT_OF_BRIDGE_MODE = 3;
 
         /// <summary>
-        /// 设备ID，在平台注册设备生成
+        /// Indicates a device ID, which is obtained when the device is registered on the platform.
         /// </summary>
         public string DeviceId { get; set; }
 
         /// <summary>
-        /// 设备密码
+        /// Indicates a secret.
         /// </summary>
         public string Secret { get; set; }
 
         /// <summary>
-        /// 设备接入平台地址
+        /// Indicates a device access address.
         /// </summary>
         public string ServerUri { get; set; }
 
         /// <summary>
-        /// 设备接入平台端口
+        /// Indicates a port for device access.
         /// </summary>
         public int Port { get; set; }
 
         /// <summary>
-        /// 设备接入模式
+        /// Device access mode, the Default value is 0.
         /// </summary>
         public int Mode { get; set; }
 		
         /// <summary>
-        /// 客户端qos,默认值为1
+        /// Indicates the QoS level. The default value is 1.
         /// </summary>
         public MqttQualityOfServiceLevel Qos { get; set; } = MqttQualityOfServiceLevel.AtLeastOnce;
 
         /// <summary>
-        /// 设备证书，用于X509证书接入时校验
+        /// Indicates the device certificate. It is used to authenticate the device in the case of certification authentication.
         /// </summary>
         public X509Certificate DeviceCert { get; set; }
+
+        /// <summary>
+        /// Indicates the scope ID. It is used in the self-registration scenario during device provisioning.
+        /// </summary>
+        public string ScopeId { get; set; }
     }
 }

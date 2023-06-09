@@ -9,7 +9,7 @@ using IoT.SDK.Device.Utils;
 namespace IoT.Device.Demo
 {
     /// <summary>
-    /// 演示如何直接使用DeviceClient处理平台下发的命令
+    /// Demonstrates how to use DeviceClient to process a command delivered by the platform.
     /// </summary>
     public class CommandSample : CommandListener
     {
@@ -17,7 +17,7 @@ namespace IoT.Device.Demo
 
         public void FunCommandSample(string serverUri, int port, string deviceId, string deviceSecret)
         {
-            // 创建设备
+            // Creates a device.
             device = new IoTDevice(serverUri, port, deviceId, deviceSecret);
 
             if (device.Init() != 0)
@@ -34,12 +34,12 @@ namespace IoT.Device.Demo
             Console.WriteLine("onCommand, name = " + commandName);
             Console.WriteLine("onCommand, paras =  " + JsonUtil.ConvertObjectToJsonString(paras));
 
-            ////处理命令
-            
+            ////Processes a command.
+
             Dictionary<string, string> dic = new Dictionary<string, string>();
             dic.Add("result", "success");
 
-            // 发送命令响应
+            // Sends a command response.
             device.GetClient().Report(new PubMessage(requestId, new CommandRsp(0, dic)));
         }
     }

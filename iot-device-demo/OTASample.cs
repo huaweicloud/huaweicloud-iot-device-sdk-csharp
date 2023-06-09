@@ -6,10 +6,11 @@ namespace IoT.Device.Demo
     public class OTASample
     {
         /// <summary>
-        /// OTA sample，用来演示如何实现设备升级。
-        /// 使用方法：用户在平台上创建升级任务后，修改main函数里设备参数后启动本例，即可看到设备收到升级通知，并下   载升级包进行升级，
-        /// 并上报升级结果。在平台上可以看到升级结果
-        /// 前提条件：\download\ 其中根目录必须包含download文件夹（可根据情况自定义）
+        /// Demonstrates how to upgrade devices.
+        /// Usage: After creating an upgrade task on the platform, modify the device parameters in the main function and start this sample.
+        /// The device receives the upgrade notification, downloads the upgrade package, and reports the upgrade result.
+        /// The upgrade result is displayed on the platform.
+        /// Prerequisites: \download\ The root directory must contain the download folder (which can be customized as required).
         /// </summary>
         /// <param name="serverUri"></param>
         /// <param name="port"></param>
@@ -17,10 +18,10 @@ namespace IoT.Device.Demo
         /// <param name="deviceSecret"></param>
         public void FunOTASample(string serverUri, int port, string deviceId, string deviceSecret)
         {
-            // 创建设备
+            // Creates a device.
             IoTDevice device = new IoTDevice(serverUri, port, deviceId, deviceSecret);
 
-            // package路径必须包含软固件包名称及后缀
+            // The package path must contain the software or firmware package name and extension.
             string packageSavePath = IotUtil.GetRootDirectory() + @"\download\test.bin";
             OTAUpgrade otaSample = new OTAUpgrade(device, packageSavePath);
             otaSample.Init();

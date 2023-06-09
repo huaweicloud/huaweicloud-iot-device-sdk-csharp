@@ -34,12 +34,12 @@ using IoT.SDK.Device.Utils;
 namespace IoT.SDK.Device.Client.Requests
 {
     /// <summary>
-    /// 设备属性内容
+    /// Provides APIs related to device properties.
     /// </summary>
     public class DeviceProperties
     {
         /// <summary>
-        /// 服务属性列表
+        /// Indicates service properties.
         /// </summary>
         public List<ServiceProperty> services { get; set; }
 

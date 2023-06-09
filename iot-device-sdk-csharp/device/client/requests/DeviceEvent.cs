@@ -34,30 +34,30 @@ using Newtonsoft.Json;
 namespace IoT.SDK.Device.Client.Requests
 {
     /// <summary>
-    /// 服务的事件
+    /// Provides APIs related to a specific service event.
     /// </summary>
     public class DeviceEvent
     {
         /// <summary>
-        /// 事件所属服务id
+        /// Indicates a service ID.
         /// </summary>
         [JsonProperty("service_id")]
         public string serviceId { get; set; }
 
         /// <summary>
-        /// 事件类型
+        /// Indicates an event type.
         /// </summary>
         [JsonProperty("event_type")]
         public string eventType { get; set; }
 
         /// <summary>
-        /// 事件发生的事件
+        /// Indicates the time when the event occurred.
         /// </summary>
         [JsonProperty("event_time")]
         public string eventTime { get; set; }
 
         /// <summary>
-        /// 事件具体的参数
+        /// Indicates event parameters.
         /// </summary>
         public Dictionary<string, object> paras { get; set; }
     }

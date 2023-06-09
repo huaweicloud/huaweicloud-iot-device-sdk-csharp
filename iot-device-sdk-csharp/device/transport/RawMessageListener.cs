@@ -31,26 +31,26 @@
 namespace IoT.SDK.Device.Transport
 {
     /// <summary>
-    /// 原始消息接收监听器
+    /// Provides listeners to listen to raw messages.
     /// </summary>
     public interface RawMessageListener
     {
         /// <summary>
-        /// 收到消息通知（命令下发）
+        /// Called when a raw message is received.
         /// </summary>
-        /// <param name="message">原始消息</param>
+        /// <param name="message">Indicates the raw message.</param>
         void OnMessageReceived(RawMessage message);
 
         /// <summary>
-        /// 消息发布成功通知
+        /// Called when a raw message is published.
         /// </summary>
-        /// <param name="message">原始消息</param>
+        /// <param name="message">Indicates the raw message.</param>
         void OnMessagePublished(RawMessage message);
 
         /// <summary>
-        /// 消息发布失败通知
+        /// Called when a raw message fails to publish.
         /// </summary>
-        /// <param name="message">原始消息</param>
+        /// <param name="message">Indicates the raw message.</param>
         void OnMessageUnPublished(RawMessage message);
     }
 }

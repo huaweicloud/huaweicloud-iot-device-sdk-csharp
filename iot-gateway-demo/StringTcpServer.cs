@@ -38,14 +38,14 @@ namespace IoT.Gateway.Demo
 
             subDeviceInfoList.Add(deviceInfo);
 
-            ////设备侧添加子设备
+            ////Add sub device on device side.
             ////simpleGateway.ReportAddSubDevice(subDeviceInfoList);
 
             List<string> deviceIds = new List<string>();
 
             deviceIds.Add("5eb4cd4049a5ab087d7d4861_test_sub");
 
-            ////设备侧删除子设备
+            ////Delete sub device on device side
             ////simpleGateway.ReportDeleteSubDevice(deviceIds);
 
             Task.Run(async () => { await Run(); });
@@ -100,14 +100,14 @@ namespace IoT.Gateway.Demo
                 IChannel incoming = ctx.Channel;
                 Log.Info("channelRead0" + incoming.RemoteAddress + " msg :" + msg);
 
-                // 如果是首条消息,创建session
+                // Creates a session if the message is the first message.
                 Session session = simpleGateway.GetSessionByChannel(incoming.Id.AsLongText());
                 if (session == null)
                 {
                     string nodeId = msg;
                     session = simpleGateway.CreateSession(nodeId, incoming);
 
-                    // 创建会话失败，拒绝连接
+                    // Rejects the connection is the session fails to create.
                     if (session == null)
                     {
                         Log.Info("close channel");
@@ -121,20 +121,20 @@ namespace IoT.Gateway.Demo
                 }
                 else
                 {
-                    // 网关收到子设备上行数据时，可以以消息或者属性上报转发到平台。
-                    // 实际使用时根据需要选择一种即可，这里为了演示，两种类型都转发一遍
+                    // When receiving upstream data from a child device, the gateway can report the data to the IoT platform as a message or property.
+                    // This example shows both data reporting types. In practice, select either one.
 
-                    // 上报消息用reportSubDeviceMessage
+                    // Calls reportSubDeviceMessage to report a message.
                     DeviceMessage deviceMessage = new DeviceMessage(msg);
                     deviceMessage.deviceId = session.deviceId;
                     simpleGateway.ReportSubDeviceMessage(deviceMessage);
 
-                    // 报属性则调用reportSubDeviceProperties，属性的serviceId和字段名要和子设备的产品模型保持一致
+                    // Calls reportSubDeviceProperties to report properties. The serviceId and field names of the properties must be the same as those defined in the product model of the child device.
                     ServiceProperty serviceProperty = new ServiceProperty();
                     serviceProperty.serviceId = "smokeDetector";
                     Dictionary<string, object> props = new Dictionary<string, object>();
 
-                    // 属性值暂且写死，实际中应该根据子设备上报的进行组装
+                    // In this example, the property values are hardcoded. In practice, they are assembled using the values reported by the child device.
                     props.Add("alarm", 1);
                     props.Add("temperature", 2);
                     serviceProperty.properties = props;

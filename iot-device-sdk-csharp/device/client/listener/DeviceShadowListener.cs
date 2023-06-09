@@ -33,10 +33,10 @@ namespace IoT.SDK.Device.Client.Listener
     public interface DeviceShadowListener
     {
         /// <summary>
-        /// 查询设备影子数据
+        /// Called when a device shadow query request is received.
         /// </summary>
-        /// <param name="requestId">请求ID</param>
-        /// <param name="message">消息内容</param>
+        /// <param name="requestId">Indicates the request ID.</param>
+        /// <param name="message">Indicates the message content.</param>
         void OnShadowCommand(string requestId, string message);
     }
 }

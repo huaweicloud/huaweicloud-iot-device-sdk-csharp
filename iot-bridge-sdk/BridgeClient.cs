@@ -44,7 +44,8 @@ using System.Threading.Tasks;
 using MQTTnet;
 
 namespace IoT.SDK.Bridge.Clent {
-    public class BridgeClient : DeviceClient {
+    public class BridgeClient : DeviceClient
+    {
         private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
         Dictionary<string, RawMessageListener> dict;
@@ -176,7 +177,7 @@ namespace IoT.SDK.Bridge.Clent {
             string topic = string.Format(BRIDGE_LOGOUT, this.bridgeId, deviceId, requestId);
             PubMessage msg = new PubMessage(topic, "");
             Report(msg);
-            
+
             return GetSyncResult(millisecondTimeout, requestId, future, msg);
         }
 

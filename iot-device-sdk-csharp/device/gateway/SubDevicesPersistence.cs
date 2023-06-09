@@ -33,7 +33,7 @@ using IoT.SDK.Device.Gateway.Requests;
 namespace IoT.SDK.Device.Gateway
 {
     /// <summary>
-    /// 提供子设备信息持久化保存
+    /// Persistently stores child device details.
     /// </summary>
     public interface SubDevicesPersistence
     {

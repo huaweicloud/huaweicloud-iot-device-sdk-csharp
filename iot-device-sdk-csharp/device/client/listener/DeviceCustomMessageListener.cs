@@ -33,9 +33,9 @@ namespace IoT.SDK.Device.Client.Listener
     public interface DeviceCustomMessageListener
     {
         /// <summary>
-        /// 下发设备消息（自定义Topic）
+        /// Called when a message is delivered from a custom topic.
         /// </summary>
-        /// <param name="message">消息内容</param>
+        /// <param name="message">Indicates the message content.</param>
         void OnCustomMessageCommand(string message);
     }
 }

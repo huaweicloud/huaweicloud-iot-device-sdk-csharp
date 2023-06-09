@@ -35,23 +35,23 @@ using Newtonsoft.Json;
 namespace IoT.SDK.Device.Client.Requests
 {
     /// <summary>
-    /// 服务的属性
+    /// Provides APIs related to service properties.
     /// </summary>
     public class ServiceProperty
     {
         /// <summary>
-        /// 服务id，和设备模型里一致
+        /// Indicates a service ID, which must be the same as that defined in the product model.
         /// </summary>
         [JsonProperty("service_id")]
         public string serviceId { get; set; }
 
         /// <summary>
-        /// 属性值，具体字段由设备模型定义
+        /// Indicates a property value. The property field is defined in the product model.
         /// </summary>
         public Dictionary<string, object> properties { get; set; }
 
         /// <summary>
-        /// 属性变化的时间，格式：yyyyMMddTHHmmssZ，可选，不带以平台收到的时间为准
+        /// Indicates the time when the property value was changed, in the format of yyyyMMddTHHmmssZ. It is optional. If it is set to NULL, the time when the platform received the property value is used.
         /// </summary>
         public string eventTime { get; set; }
         

@@ -35,35 +35,35 @@ using IoT.SDK.Device.Client.Requests;
 namespace IoT.SDK.Device.Service
 {
     /// <summary>
-    /// 服务接口类
+    /// Provides APIs related to services.
     /// </summary>
     public interface IService
     {
         /// <summary>
-        /// 读属性回调
+        /// Called when a property read request is received.
         /// </summary>
-        /// <param name="fields">指定读取的字段名，不指定则读取全部可读字段</param>
-        /// <returns>属性值，json格式</returns>
+        /// <param name="fields">Indicates the names of fields to read. If it is set to NULL, all readable fields are read.</param>
+        /// <returns>Returns the property values, in JSON format.</returns>
         Dictionary<string, object> OnRead(params string[] fields);
 
         /// <summary>
-        /// 写属性回调
+        /// Called when a property write request is received.
         /// </summary>
-        /// <param name="properties">属性期望值</param>
-        /// <returns>操作结果jsonObject</returns>
+        /// <param name="properties">Indicates the desired properties.</param>
+        /// <returns>Returns the operation result, which is a JSON object.</returns>
         IotResult OnWrite(Dictionary<string, object> properties);
 
         /// <summary>
-        /// 命令回调
+        /// Called when a command delivered by the platform is received.
         /// </summary>
-        /// <param name="command">命令</param>
-        /// <returns>执行结果</returns>
+        /// <param name="command">Indicates a command request.</param>
+        /// <returns>Returns a command response.</returns>
         CommandRsp OnCommand(Command command);
 
         /// <summary>
-        /// 事件回调
+        /// Called when an event delivered by the platform is received.
         /// </summary>
-        /// <param name="deviceEvent">事件</param>
+        /// <param name="deviceEvent">Indicates the event.</param>
         void OnEvent(DeviceEvent deviceEvent);
     }
 }

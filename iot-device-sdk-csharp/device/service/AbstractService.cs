@@ -40,7 +40,7 @@ using NLog;
 namespace IoT.SDK.Device.Service
 {
     /// <summary>
-    /// 抽象服务类，提供了属性自动读写和命令调用能力，用户可以继承此类，根据物模型定义自己的服务
+    /// Provides automatic properties read/write and command invoking capabilities. You can inherit this class and define your own services based on the product model.
     /// </summary>
     public class AbstractService : IService
     {
@@ -88,10 +88,10 @@ namespace IoT.SDK.Device.Service
                 dic.Clear();
                 dic.Add("result", "success");
 
-                // 反射调用方法
+                // A reflection call method.
                 MethodInfo nonstaticMethod = deviceServiceType.GetMethod(methodInfo.Name);
 
-                // 非静态方法调用需要类实例
+                // Class instance required for non-static method calls.
                 object obj = nonstaticMethod.Invoke(deviceService, new string[] { JsonUtil.ConvertObjectToJsonString(command.paras) });
                 
                 return (CommandRsp)obj;
@@ -106,7 +106,7 @@ namespace IoT.SDK.Device.Service
         }
 
         /// <summary>
-        /// 事件处理。收到平台下发的事件时此接口被自动调用。默认为空实现
+        /// Called when an event delivered by the platform is received. The default implementation does nothing.
         /// </summary>
         /// <param name="deviceEvent"></param>
         public virtual void OnEvent(DeviceEvent deviceEvent)
@@ -117,8 +117,8 @@ namespace IoT.SDK.Device.Service
         public void SetDeviceService<T>(T deviceService)
         {
             this.deviceService = deviceService;
-            deviceServiceType = typeof(T); // 反射对象
-            var deviceServiceProperties = deviceServiceType.GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance); // 获取对象属性
+            deviceServiceType = typeof(T); // Reflection object
+            var deviceServiceProperties = deviceServiceType.GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance); // Obtains the device properties.
 
             foreach (PropertyInfo servicePro in deviceServiceProperties)
             {
@@ -170,15 +170,15 @@ namespace IoT.SDK.Device.Service
         }
 
         /// <summary>
-        /// 读属性回调
+        /// Called when a property query request is received.
         /// </summary>
-        /// <param name="properties">指定读取的字段名，不指定则读取全部可读字段</param>
-        /// <returns>属性值</returns>
+        /// <param name="properties">Indicates the names of fields to read. If it is set to NULL, all readable fields are read.</param>
+        /// <returns>Returns the property values.</returns>
         public Dictionary<string, object> OnRead(params string[] properties)
         {
             Dictionary<string, object> ret = new Dictionary<string, object>();
 
-            // 读取指定的字段
+            // Reads specified fields.
             if (properties.Length > 0)
             {
                 foreach (string propertyName in properties)
@@ -199,7 +199,7 @@ namespace IoT.SDK.Device.Service
                 return ret;
             }
 
-            // 读取全部字段
+            // Reads all fields.
             foreach (KeyValuePair<string, PropertyInfo> kv in readableFields)
             {
                 object value = GetFiledValue(kv.Key);
@@ -213,11 +213,11 @@ namespace IoT.SDK.Device.Service
         }
 
         /// <summary>
-        /// 写属性。收到平台下发的写属性操作时此接口被自动调用。
-        /// 如果用户希望在写属性时增加额外处理，可以重写此接口
+        /// Called when a property setting request is received.
+        /// To add extra processing when writing properties, you can override this method.
         /// </summary>
-        /// <param name="properties">平台期望属性的值</param>
-        /// <returns>操作结果</returns>
+        /// <param name="properties">Indicates the desired properties.</param>
+        /// <returns>Returns the operation result.</returns>
         public IotResult OnWrite(Dictionary<string, object> properties)
         {
             List<string> changedProps = new List<string>();
@@ -241,10 +241,10 @@ namespace IoT.SDK.Device.Service
                         continue;
                     }
 
-                    // 反射调用方法
+                    // A reflection call method.
                     MethodInfo nonstaticMethod = commands[setter];
 
-                    // 调用方法设置值
+                    // Sets a value.
                     if (SetFiledValue(nonstaticMethod, kv.Value) != 1)
                     {
                         Log.Error("write property fail:" + propertyName);
@@ -262,7 +262,7 @@ namespace IoT.SDK.Device.Service
                 }
             }
 
-            // 上报变化的属性
+            // Reports changed properties.
             if (changedProps.Count > 0)
             {
                 FirePropertiesChanged(changedProps.ToArray());
@@ -270,11 +270,11 @@ namespace IoT.SDK.Device.Service
 
             return IotResult.SUCCESS;
         }
-        
+
         /// <summary>
-        /// 通知服务属性变化
+        /// Reports a property change.
         /// </summary>
-        /// <param name="properties">变化的属性，不指定默认读取全部可读属性</param>
+        /// <param name="properties">Indicates the properties changed. If it is set to NULL, changes of all readable properties are reported.</param>
         public void FirePropertiesChanged(params string[] properties)
         {
             iotDevice.FirePropertiesChanged(ServiceId, properties);
@@ -293,22 +293,22 @@ namespace IoT.SDK.Device.Service
                 FirePropertiesChanged();
                 timer = new Timer();
 
-                // 循环间隔时间(10秒钟)
+                // Set the interval. The default value is 10 seconds.
                 timer.Interval = reportInterval;
 
-                // 允许Timer执行
+                // Allow the timer.
                 timer.Enabled = true;
 
-                // 定义回调
+                // Define a callback.
                 timer.Elapsed += new ElapsedEventHandler(Timer_Event);
 
-                // 定义多次循环
+                // Define multiple loops.
                 timer.AutoReset = true;
             }
         }
 
         /// <summary>
-        /// 关闭自动周期上报，您可以通过FirePropertiesChanged触发上报
+        /// Disables automatic, periodic property reporting. You can use firePropertiesChanged to trigger property reporting.
         /// </summary>
         public void DisableAutoReport()
         {
@@ -328,16 +328,16 @@ namespace IoT.SDK.Device.Service
         {
             try
             {
-                ParameterInfo[] paramsInfo = methodInfo.GetParameters(); // 得到指定方法的参数列表
+                ParameterInfo[] paramsInfo = methodInfo.GetParameters(); // Obtains parameters with the specified method.
                 object[] objValue = new object[paramsInfo.Length];
                 for (int i = 0; i < paramsInfo.Length; i++)
                 {
                     Type tType = paramsInfo[i].ParameterType;
 
-                    // 如果它是值类型,或者string
+                    // If it is a value type or a string.
                     if (tType.Equals(typeof(string)) || (!tType.IsInterface && !tType.IsClass))
                     {
-                        // 改变参数类型
+                        // change the parameter type.
                         objValue[i] = Convert.ChangeType(value, tType);
                     }
                 }
@@ -368,7 +368,7 @@ namespace IoT.SDK.Device.Service
 
                 MethodInfo nonstaticMethod = commands[getter];
 
-                // 非静态方法调用需要类实例
+                // Class instance required for non-static method calls
                 object value = nonstaticMethod.Invoke(deviceService, null);
 
                 return value;

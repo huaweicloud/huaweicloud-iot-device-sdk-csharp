@@ -31,15 +31,15 @@
 namespace IoT.SDK.Device.Transport
 {
     /// <summary>
-    /// 原始消息类
+    /// Provides APIs related to raw messages.
     /// </summary>
     public class RawMessage
     {
         /// <summary>
         /// Initializes a new instance of the RawMessage class.
         /// </summary>
-        /// <param name="topic">消息topic</param>
-        /// <param name="payload">消息体</param>
+        /// <param name="topic">Indicates a message topic.</param>
+        /// <param name="payload">Indicates the message body.</param>
         public RawMessage(string topic, string payload)
         {
             this.Topic = topic;
@@ -50,9 +50,9 @@ namespace IoT.SDK.Device.Transport
         /// <summary>
         /// Initializes a new instance of the RawMessage class.
         /// </summary>
-        /// <param name="messageId">消息ID</param>
-        /// <param name="topic">消息topic</param>
-        /// <param name="payload">消息体</param>
+        /// <param name="messageId">Indicates a message ID.</param>
+        /// <param name="topic">Indicates a message topic.</param>
+        /// <param name="payload">Indicates the message body.</param>
         public RawMessage(string messageId, string topic, string payload)
         {
             this.MessageId = messageId;
@@ -64,9 +64,9 @@ namespace IoT.SDK.Device.Transport
         /// <summary>
         /// Initializes a new instance of the RawMessage class.
         /// </summary>
-        /// <param name="topic">消息topic</param>
-        /// <param name="payload">消息体</param>
-        /// <param name="qos">qos,0或1</param>
+        /// <param name="topic">Indicates a topic.</param>
+        /// <param name="payload">Indicates the message body.</param>
+        /// <param name="qos">Indicates a QoS level. The value can be 0 or 1.</param>
         public RawMessage(string topic, string payload, int qos)
         {
             this.Qos = qos;
@@ -80,22 +80,22 @@ namespace IoT.SDK.Device.Transport
         }
 
         /// <summary>
-        /// 消息主题
+        /// Indicates a message topic.
         /// </summary>
         public string Topic { get; set; }
 
         /// <summary>
-        /// 消息体
+        /// Indicates a message body.
         /// </summary>
         public string Payload { get; set; }
 
         /// <summary>
-        /// qos,0或1，默认为1
+        /// Indicates a QoS level. The value can be 0 or 1. The default value is 1.
         /// </summary>
         public int Qos { get; set; }
-        
+
         /// <summary>
-        /// 唯一消息Id
+        /// Indicates a message ID.
         /// </summary>
         public string MessageId { get; set; }
         

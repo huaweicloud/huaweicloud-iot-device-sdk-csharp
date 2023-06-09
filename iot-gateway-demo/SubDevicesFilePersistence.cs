@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using IoT.SDK.Device.Config;
 using IoT.SDK.Device.Gateway;
 using IoT.SDK.Device.Gateway.Requests;
 using IoT.SDK.Device.Utils;
@@ -10,7 +11,7 @@ using NLog;
 namespace IoT.Gateway.Demo
 {
     /// <summary>
-    /// 将子设备信息保存到json文件。用户可以自己实现SubDevicesPersistence接口来进行替换
+    /// Saves sub device details to a JSON file. You can override this method.
     /// </summary>
     public class SubDevicesFilePersistence : SubDevicesPersistence
     {
@@ -19,12 +20,10 @@ namespace IoT.Gateway.Demo
         private Mutex mutex = new Mutex(false);
 
         private SubDevInfo subDevInfoCache;
-
-        private string path = IotUtil.GetRootDirectory() + @"\json\subdevices.json";
-
+        
         public SubDevicesFilePersistence()
         {
-            string content = ReadJsonFile();
+            string content = IotUtil.ReadJsonFile(CommonFilePath.SUB_DEVICES_PATH);
             
             this.subDevInfoCache = JsonUtil.ConvertJsonStringToObject<SubDevInfo>(content);
 
@@ -76,7 +75,7 @@ namespace IoT.Gateway.Demo
             }
             finally
             {
-                // 释放锁
+                // Releases a mutex.
                 mutex.ReleaseMutex();
             }
 
@@ -118,7 +117,7 @@ namespace IoT.Gateway.Demo
             }
             finally
             {
-                // 释放锁
+                // Releases a mutex.
                 mutex.ReleaseMutex();
             }
             
@@ -134,7 +133,7 @@ namespace IoT.Gateway.Demo
         {
             try
             {
-                string content = ReadJsonFile();
+                string content = IotUtil.ReadJsonFile(CommonFilePath.SUB_DEVICES_PATH);
 
                 SubDevInfo subDevInfo = JsonUtil.ConvertJsonStringToObject<SubDevInfo>(content);
 
@@ -149,7 +148,7 @@ namespace IoT.Gateway.Demo
                     subDevInfo.version = subDevicesInfo.version;
                 }
                 
-                File.WriteAllText(path, JsonUtil.ConvertObjectToJsonString(subDevInfo));
+                File.WriteAllText(CommonFilePath.SUB_DEVICES_PATH, JsonUtil.ConvertObjectToJsonString(subDevInfo));
             }
             catch (Exception ex)
             {
@@ -165,7 +164,7 @@ namespace IoT.Gateway.Demo
         {
             try
             {
-                string content = ReadJsonFile();
+                string content = IotUtil.ReadJsonFile(CommonFilePath.SUB_DEVICES_PATH);
 
                 SubDevInfo subDevInfo = JsonUtil.ConvertJsonStringToObject<SubDevInfo>(content);
 
@@ -180,7 +179,7 @@ namespace IoT.Gateway.Demo
                     subDevInfo.version = subDevicesInfo.version;
                 }
 
-                File.WriteAllText(path, JsonUtil.ConvertObjectToJsonString(subDevInfo));
+                File.WriteAllText(CommonFilePath.SUB_DEVICES_PATH, JsonUtil.ConvertObjectToJsonString(subDevInfo));
             }
             catch (Exception ex)
             {
@@ -190,35 +189,6 @@ namespace IoT.Gateway.Demo
             }
 
             return 0;
-        }
-
-        private string ReadJsonFile()
-        {
-            StreamReader streamReader = null;
-
-            string content = string.Empty;
-
-            try
-            {
-                streamReader = new StreamReader(path);
-
-                content = streamReader.ReadToEnd();
-
-                streamReader.Close();
-            }
-            catch (Exception ex)
-            {
-                Log.Error("read sub devices fail in json file");
-            }
-            finally
-            {
-                if (streamReader != null)
-                {
-                    streamReader.Close();
-                }
-            }
-
-            return content;
         }
     }
 }

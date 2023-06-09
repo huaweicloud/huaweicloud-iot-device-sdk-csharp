@@ -34,7 +34,7 @@ using Newtonsoft.Json;
 namespace IoT.SDK.Device.Client.Requests
 {
     /// <summary>
-    /// 命令响应
+    /// Provides APIs related to command responses.
     /// </summary>
     public class CommandRsp
     {
@@ -54,19 +54,19 @@ namespace IoT.SDK.Device.Client.Requests
         }
 
         /// <summary>
-        /// 结果码，0表示成功，其他表示失败。不带默认认为成功
+        /// Indicates a result code. The value 0 indicates a success, and other values indicate a failure. If it is not specified, the command execution is successful.
         /// </summary>
         [JsonProperty("result_code")]
         public int resultCode { get; set; }
 
         /// <summary>
-        /// 命令的响应名称，在设备关联的产品模型中定义。可选
+        /// Indicates a command response name, which is defined in the product model. It is optional.
         /// </summary>
         [JsonProperty("response_name")]
         public string responseName { get; set; }
 
         /// <summary>
-        /// 命令的响应参数，具体字段在设备关联的产品模型中定义。可选
+        /// Indicates command response parameters, which are defined in the product model. It is optional.
         /// </summary>
         public Dictionary<string, string> paras { get; set; }
     }

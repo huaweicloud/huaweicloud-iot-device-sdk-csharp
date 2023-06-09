@@ -35,7 +35,7 @@ using System.Text;
 namespace IoT.SDK.Device.Gateway.Requests
 {
     /// <summary>
-    /// 子设备信息
+    /// Provides APIs related to child device details.
     /// </summary>
     public class SubDevicesInfo
     {

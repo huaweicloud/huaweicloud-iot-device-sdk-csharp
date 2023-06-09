@@ -39,41 +39,41 @@ using NLog;
 namespace IoT.SDK.Device.OTA
 {
     /// <summary>
-    /// OTA服务类，提供设备升级相关接口，使用方法：
+    /// Provides APIs related to OTA upgrades.
     /// </summary>
     public class OTAService : AbstractService
     {
-        // 升级上报的错误码，用户也可以扩展自己的错误码
-        public static readonly int OTA_CODE_SUCCESS = 0; // 成功
-        public static readonly int OTA_CODE_BUSY = 1; // 设备使用中
-        public static readonly int OTA_CODE_SIGNAL_BAD = 2; // 信号质量差
-        public static readonly int OTA_CODE_NO_NEED = 3; // 已经是最新版本
-        public static readonly int OTA_CODE_LOW_POWER = 4; // 电量不足
-        public static readonly int OTA_CODE_LOW_SPACE = 5; // 剩余空间不足
-        public static readonly int OTA_CODE_DOWNLOAD_TIMEOUT = 6; // 下载超时
-        public static readonly int OTA_CODE_CHECK_FAIL = 7; // 升级包校验失败
-        public static readonly int OTA_CODE_UNKNOWN_TYPE = 8; // 升级包类型不支持
-        public static readonly int OTA_CODE_LOW_MEMORY = 9; // 内存不足
-        public static readonly int OTA_CODE_INSTALL_FAIL = 10; // 安装升级包失败
-        public static readonly int OTA_CODE_INNER_ERROR = 255; // 内部异常
+        // Error codes reported during an upgrade. You can also define your own error codes.
+        public static readonly int OTA_CODE_SUCCESS = 0; // Upgraded.
+        public static readonly int OTA_CODE_BUSY = 1; // The device is in use.
+        public static readonly int OTA_CODE_SIGNAL_BAD = 2; // Poor signal.
+        public static readonly int OTA_CODE_NO_NEED = 3; // Already the latest version.
+        public static readonly int OTA_CODE_LOW_POWER = 4; // Low battery.
+        public static readonly int OTA_CODE_LOW_SPACE = 5; // Insufficient free space.
+        public static readonly int OTA_CODE_DOWNLOAD_TIMEOUT = 6; // Download timed out.
+        public static readonly int OTA_CODE_CHECK_FAIL = 7; // Upgrade package verification failed.
+        public static readonly int OTA_CODE_UNKNOWN_TYPE = 8; // Unsupported upgrade package type.
+        public static readonly int OTA_CODE_LOW_MEMORY = 9; // Insufficient memory.
+        public static readonly int OTA_CODE_INSTALL_FAIL = 10; // Upgrade package installation failed.
+        public static readonly int OTA_CODE_INNER_ERROR = 255; // Internal exception.
 
         private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
         private OTAListener otaListener;
 
         /// <summary>
-        /// 设置OTA监听器
+        /// Sets an OTA listener.
         /// </summary>
-        /// <param name="otaListener">OTA监听器</param>
+        /// <param name="otaListener">Indicates the OTA listener to set.</param>
         public void SetOtaListener(OTAListener otaListener)
         {
             this.otaListener = otaListener;
         }
 
         /// <summary>
-        /// 接收OTA事件处理
+        /// Called when an OTA upgrade event is processed.
         /// </summary>
-        /// <param name="deviceEvent">服务事件</param>
+        /// <param name="deviceEvent">Indicates an event.</param>
         public override void OnEvent(DeviceEvent deviceEvent)
         {
             if (otaListener == null)
@@ -90,19 +90,28 @@ namespace IoT.SDK.Device.OTA
             {
                 OTAPackage pkg = JsonUtil.ConvertDicToObject<OTAPackage>(deviceEvent.paras);
 
-                // OTA单独起一个线程处理
+                // A separate thread is started for the OTA upgrade.
                 new Thread(new ThreadStart(new Action(() =>
                 {
-                    // to do 启动新线程要执行的代码
+                    // to do Write code used to start the new thread.
                     otaListener.OnNewPackage(pkg);
+                }))).Start();
+            } else if (deviceEvent.eventType == "firmware_upgrade_v2" || deviceEvent.eventType == "software_upgrade_v2")
+            {
+                OTAPackageV2 pkgV2 = JsonUtil.ConvertDicToObject<OTAPackageV2>(deviceEvent.paras);
+                // A separate thread is started for the OTA upgrade.
+                new Thread(new ThreadStart(new Action(() =>
+                {
+                    // to do Write code used to start the new thread.
+                    otaListener.OnNewPackageV2(pkgV2);
                 }))).Start();
             }
         }
 
         /// <summary>
-        /// 上报固件版本信息
+        /// Reports a firmware version.
         /// </summary>
-        /// <param name="version">固件版本</param>
+        /// <param name="version">Indicates the firmware version.</param>
         public void ReportVersion(string version)
         {
             Dictionary<string, object> node = new Dictionary<string, object>();
@@ -120,12 +129,12 @@ namespace IoT.SDK.Device.OTA
         }
 
         /// <summary>
-        /// 上报升级状态
+        /// Reports the upgrade status.
         /// </summary>
-        /// <param name="result">升级结果</param>
-        /// <param name="progress">升级进度0-100</param>
-        /// <param name="version">当前版本</param>
-        /// <param name="description">具体失败的原因，可选参数</param>
+        /// <param name="result">Indicates the upgrade result.</param>
+        /// <param name="progress">Indicates the upgrade progress, ranging from 0 to 100.</param>
+        /// <param name="version">Indicates the current version.</param>
+        /// <param name="description">Indicates the description of the failure. It is optional.</param>
         public void ReportOtaStatus(int result, int progress, string version, string description)
         {
             Dictionary<string, object> node = new Dictionary<string, object>();

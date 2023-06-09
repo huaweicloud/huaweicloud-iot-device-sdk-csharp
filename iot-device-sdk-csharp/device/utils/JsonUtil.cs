@@ -37,10 +37,10 @@ namespace IoT.SDK.Device.Utils
     public static class JsonUtil
     {
         /// <summary>
-        /// 把对象转换为JSON字符串
+        /// Converts an object into a JSON string.
         /// </summary>
-        /// <param name="o">对象</param>
-        /// <returns>JSON字符串</returns>
+        /// <param name="o">Indicates the object.</param>
+        /// <returns>Returns a JSON string.</returns>
         public static string ConvertObjectToJsonString(object o)
         {
             if (o == null)
@@ -52,9 +52,9 @@ namespace IoT.SDK.Device.Utils
         }
 
         /// <summary>
-        /// 把Json文本转为实体
+        /// Converts a JSON string to an object.
         /// </summary>
-        /// <typeparam name="T">实体类</typeparam>
+        /// <typeparam name="T">Indicates the object class.</typeparam>
         /// <param name="jsonString"></param>
         /// <returns></returns>
         public static T ConvertJsonStringToObject<T>(string jsonString)
@@ -70,10 +70,10 @@ namespace IoT.SDK.Device.Utils
         }
 
         /// <summary>
-        /// 字典类型转化为对象
+        /// Converts a data dictionary to an object.
         /// </summary>
-        /// <typeparam name="T">实体类对象</typeparam>
-        /// <param name="dic">数据字典</param>
+        /// <typeparam name="T">Indicates the object class.</typeparam>
+        /// <param name="dic">Indicates the data dictionary.</param>
         /// <returns></returns>
         public static T ConvertDicToObject<T>(Dictionary<string, object> dic) where T : new()
         {
@@ -85,6 +85,23 @@ namespace IoT.SDK.Device.Utils
             {
                 return default(T);
             }
+        }
+
+        /// <summary>
+        /// Converts JSON string to a data dictionary.
+        /// </summary>
+        /// <typeparam name="TKey">dictionary key</typeparam>
+        /// <typeparam name="TValue">dictionary value</typeparam>
+        /// <param name="jsonString">json string</param>
+        /// <returns>dictionary data</returns>
+        public static Dictionary<TKey, TValue> ConvertJsonStringToDic<TKey, TValue>(string jsonString)
+        {
+            if (string.IsNullOrEmpty(jsonString))
+            {
+                return new Dictionary<TKey, TValue>();
+            }
+
+            return JsonConvert.DeserializeObject<Dictionary<TKey, TValue>>(jsonString);
         }
     }
 }

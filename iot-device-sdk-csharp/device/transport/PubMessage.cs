@@ -38,9 +38,9 @@ namespace IoT.SDK.Device.Transport
     public class PubMessage
     {
         /// <summary>
-        /// 上报设备属性（reportProperties）
+        /// Reports device properties.
         /// </summary>
-        /// <param name="properties">设备属性列表</param>
+        /// <param name="properties">Indicates the properties to report.</param>
         public PubMessage(List<ServiceProperty> properties)
         {
             this.Topic = CommonTopic.TOPIC_PROPERTIES_REPORT;
@@ -60,12 +60,12 @@ namespace IoT.SDK.Device.Transport
         }
 
         /// <summary>
-        /// 发布原始消息，原始消息和设备消息（DeviceMessage）的区别是：
-        /// 1、可以自定义topic，该topic需要在平台侧配置
-        /// 2、不限制payload的格式
+        /// Publishes a raw message. The differences between raw messages and device messages are as follows:
+        /// 1. A topic can be customized. The topic must be configured on the platform.
+        /// 2. The payload format is not limited.
         /// </summary>
         /// <param name="topic"></param>
-        /// <param name="message">原始消息</param>
+        /// <param name="message">Indicates the raw message to report.</param>
         public PubMessage(string topic, string message)
         {
             this.Topic = topic;
@@ -73,8 +73,8 @@ namespace IoT.SDK.Device.Transport
         }
 
         /// <summary>
-        /// 上报设备消息（reportDeviceMessage）
-        /// 如果需要上报子设备消息，需要调用DeviceMessage的setDeviceId接口设置为子设备的设备id
+        /// Reports a device message.
+        /// To report a message for a child device, call the setDeviceId API of DeviceMessage to set the device ID of the child device.
         /// </summary>
         /// <param name="deviceMessage"></param>
         public PubMessage(DeviceMessage deviceMessage)
@@ -84,10 +84,10 @@ namespace IoT.SDK.Device.Transport
         }
 
         /// <summary>
-        /// 上报命令响应（respondCommand）
+        /// Reports a command response.
         /// </summary>
-        /// <param name="requestId">请求id，响应的请求id必须和请求的一致</param>
-        /// <param name="commandRsp">命令响应</param>
+        /// <param name="requestId">Indicates the request ID, which must be the same as that in the request.</param>
+        /// <param name="commandRsp">Indicates the command response to report.</param>
         public PubMessage(string requestId, CommandRsp commandRsp)
         {
             this.Topic = CommonTopic.TOPIC_COMMANDS_RESPONSE + "=" + requestId;

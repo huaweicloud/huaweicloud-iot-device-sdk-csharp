@@ -30,6 +30,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using IoT.SDK.Device.Client.Listener;
 using IoT.SDK.Device.Client.Requests;
 using IoT.SDK.Device.Config;
@@ -38,7 +39,6 @@ using IoT.SDK.Device.Transport;
 using IoT.SDK.Device.Transport.Mqtt;
 using IoT.SDK.Device.Utils;
 using MQTTnet;
-using Newtonsoft.Json.Linq;
 using NLog;
 
 namespace IoT.SDK.Device.Client
@@ -46,6 +46,10 @@ namespace IoT.SDK.Device.Client
     public class DeviceClient : RawMessageListener, ConnectListener
     {
         private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+
+        private static readonly double AUTO_REPORT_DEVICE_INFO_TIME = 5;
+
+        private static readonly string SDK_VERSION = "C#_v1.3.1";
 
         private CommandV3Listener commandV3Listener;
 
@@ -58,6 +62,8 @@ namespace IoT.SDK.Device.Client
         private Dictionary<string, RawMessageListener> rawMessageListenerDic;
 
         private AbstractDevice device;
+
+        private Timer timer;
         
         public DeviceClient(ClientConf clientConf, AbstractDevice device)
         {
@@ -82,6 +88,8 @@ namespace IoT.SDK.Device.Client
         public DeviceMessageListener deviceMessageListener { get; set; }
 
         public ConnectListener connectListener { get; set; }
+
+        public BootstrapMessageListener bootstrapMessageListener { get; set; }
 
         public virtual void OnMessageReceived(RawMessage message)
         {
@@ -143,20 +151,20 @@ namespace IoT.SDK.Device.Client
         }
 
         /// <summary>
-        /// 上报命令响应
+        /// Reports a command response.
         /// </summary>
-        /// <param name="requestId">请求id，响应的请求id必须和请求的一致</param>
-        /// <param name="commandRsp">命令响应</param>
+        /// <param name="requestId">Indicates the request ID, which must be the same as that in the request.</param>
+        /// <param name="commandRsp">Indicates the command response to report.</param>
         public void RespondCommand(string requestId, CommandRsp commandRsp)
         {
             Report(new PubMessage(CommonTopic.TOPIC_COMMANDS_RESPONSE + "=" + requestId, JsonUtil.ConvertObjectToJsonString(commandRsp)));
         }
 
         /// <summary>
-        /// 上报读属性响应
+        /// Reports a response to a property query request.
         /// </summary>
-        /// <param name="requestId">请求id，响应的请求id必须和请求的一致</param>
-        /// <param name="services">服务属性</param>
+        /// <param name="requestId">Indicates the request ID, which must be the same as that in the request.</param>
+        /// <param name="services">Indicates service properties.</param>
         public void RespondPropsGet(string requestId, List<ServiceProperty> services)
         {
             DeviceProperties deviceProperties = new DeviceProperties();
@@ -166,10 +174,10 @@ namespace IoT.SDK.Device.Client
         }
 
         /// <summary>
-        /// 上报写属性响应
+        /// Reports a response to a property setting request.
         /// </summary>
-        /// <param name="requestId">请求id，响应的请求id必须和请求的一致</param>
-        /// <param name="iotResult">写属性结果</param>
+        /// <param name="requestId">Indicates the request ID, which must be the same as that in the request.</param>
+        /// <param name="iotResult">Indicates the property setting result.</param>
         public void RespondPropsSet(string requestId, IotResult iotResult)
         {
             Report(new PubMessage(CommonTopic.TOPIC_SYS_PROPERTIES_SET_RESPONSE + "=" + requestId, JsonUtil.ConvertObjectToJsonString(iotResult)));
@@ -197,19 +205,15 @@ namespace IoT.SDK.Device.Client
 
             device.OnCommand(requestId, command);
         }
-        
+
         /// <summary>
-        /// 和平台建立连接，此接口为阻塞调用，超时时长20s。连接成功时，SDK会自动向平台订阅系统定义的topic。
+        /// Connects to the platform. This method blocks the calling thread and the timeout duration is 20 seconds. When the connection is established, the SDK automatically subscribes to system topics.
         /// </summary>
-        /// <returns>0表示连接成功，其他表示连接失败</returns>
+        /// <returns>Returns 0 if the connection is successful; returns other values if the connection fails.</returns>
         public int Connect()
         {
             int ret = connection.Connect();
-            if (ret != 0)
-            {
-                return ret;
-            }
-
+            
             List<MqttTopicFilter> listTopic = new List<MqttTopicFilter>();
 
             var topicFilterBulderMsgDown = new MqttTopicFilterBuilder().WithTopic(string.Format(CommonTopic.TOPIC_SYS_MESSAGES_DOWN, deviceId)).Build();
@@ -236,19 +240,19 @@ namespace IoT.SDK.Device.Client
         }
 
         /// <summary>
-        /// 上报设备消息
-        /// 如果需要上报子设备消息，需要调用DeviceMessage的setDeviceId接口设置为子设备的设备id
+        /// Reports a device message.
+        /// To report a message for a child device, call the setDeviceId API of DeviceMessage to set the device ID of the child device.
         /// </summary>
-        /// <param name="deviceMessage">设备消息</param>
+        /// <param name="deviceMessage">Indicates the device message to report.</param>
         public void ReportDeviceMessage(DeviceMessage deviceMessage)
         {
             Report(new PubMessage(string.Format(CommonTopic.TOPIC_MESSAGES_UP, deviceId), JsonUtil.ConvertObjectToJsonString(deviceMessage)));
         }
 
         /// <summary>
-        /// 订阅自定义topic。系统topic由SDK自动订阅，此接口只能用于订阅自定义topic
+        /// Subscribes to a custom topic. System topics are automatically subscribed by the SDK. This method can be used only to subscribe to custom topics.
         /// </summary>
-        /// <param name="topic">自定义Topic</param>
+        /// <param name="topic">Indicates the name of the custom topic.</param>
         public void SubscribeTopic(string topic)
         {
             try
@@ -313,6 +317,9 @@ namespace IoT.SDK.Device.Client
 
         public void ConnectComplete()
         {
+            var autoEvent = new AutoResetEvent(true);
+            timer = new Timer(p => ReportSdkInfoSync("v1.0", "v1.0"), autoEvent, TimeSpan.FromSeconds(0), TimeSpan.FromDays(AUTO_REPORT_DEVICE_INFO_TIME));
+
             if (connectListener != null)
             {
                 connectListener.ConnectComplete();
@@ -321,16 +328,58 @@ namespace IoT.SDK.Device.Client
 
         public void ConnectionLost()
         {
+            if (timer != null)
+            {
+                timer.Dispose();
+            }
         }
 
         public void ConnectFail()
         {
         }
 
+        public void ReportSdkInfoSync(string swVersion, string fwVersion)
+        {
+            string sdkInfoStr = IotUtil.ReadJsonFile(CommonFilePath.DEVICE_INFO_PATH);
+
+            if (!string.IsNullOrEmpty(sdkInfoStr))
+            {
+                Dictionary<string, string> sdkInfoDic = JsonUtil.ConvertJsonStringToDic<string, string>(sdkInfoStr);
+
+                if (sdkInfoDic["sw_version"]?.ToString() == swVersion && sdkInfoDic["fw_version"]?.ToString() == fwVersion)
+                {
+                    DateTime start = Convert.ToDateTime(DateTime.Parse(sdkInfoDic["event_time"]?.ToString()).ToShortDateString());
+                    DateTime end = DateTime.Now;
+                    TimeSpan sp = end.Subtract(start);
+                    
+                    if (sp.Days < AUTO_REPORT_DEVICE_INFO_TIME)
+                    {
+                        return;
+                    }
+                }
+            }
+            
+            Dictionary<string, object> node = new Dictionary<string, object>();
+            node.Add("device_sdk_version", SDK_VERSION);
+            node.Add("sw_version", swVersion);
+            node.Add("fw_version", fwVersion);
+
+            DeviceEvent deviceEvent = new DeviceEvent();
+            deviceEvent.eventType = "sdk_info_report";
+            deviceEvent.paras = node;
+            deviceEvent.serviceId = "$sdk_info";
+            deviceEvent.eventTime = IotUtil.GetEventTime();
+
+            node.Add("event_time", DateTime.Now.ToString());
+            IotUtil.WriteJsonFile(CommonFilePath.DEVICE_INFO_PATH, JsonUtil.ConvertObjectToJsonString(node));
+
+            ReportEvent(deviceEvent);
+        }
+
         /// <summary>
-        /// 事件上报
+        /// Reports an event.
         /// </summary>
-        /// <param name="evnt">事件</param>
+        /// <param name="evnt">Indicates the event to report.</param>
         public void ReportEvent(DeviceEvent evnt)
         {
             string deviceId = clientConf.DeviceId;
@@ -344,18 +393,18 @@ namespace IoT.SDK.Device.Client
         }
 
         /// <summary>
-        /// 上报设备属性
+        /// Reports device properties.
         /// </summary>
-        /// <param name="properties">设备属性列表</param>
+        /// <param name="properties">Indicates the properties to report.</param>
         public void ReportProperties(List<ServiceProperty> properties)
         {
             Report(new PubMessage(properties));
         }
 
         /// <summary>
-        /// 消息上行
+        /// Reports a message.
         /// </summary>
-        /// <typeparam name="T">实体对象</typeparam>
+        /// <typeparam name="T">Indicates a physical object.</typeparam>
         /// <param name="pubMessage"></param>
         public virtual void Report<T>(T pubMessage) where T : PubMessage
         {
@@ -368,6 +417,14 @@ namespace IoT.SDK.Device.Client
             {
                 Log.Error("SDK.Error: Report msg error, the message is " + pubMessage.Message);
             }
+        }
+
+        /// <summary>
+        /// Close connection
+        /// </summary>
+        public void Close()
+        {
+            connection.Close();
         }
 
         private void CheckClientConf(ClientConf clientConf)
@@ -407,6 +464,7 @@ namespace IoT.SDK.Device.Client
             if (commandV3 == null)
             {
                 Log.Error("invalid commandV3");
+
                 return;
             }
 
@@ -424,11 +482,43 @@ namespace IoT.SDK.Device.Client
 
         private void OnDeviceMessage(RawMessage message)
         {
-            DeviceMessage deviceMessage = new DeviceMessage();
-            deviceMessage.content = message.ToString();
-            deviceMessageListener.OnDeviceMessage(deviceMessage);
+            DeviceMessage deviceMessage = JsonUtil.ConvertJsonStringToObject<DeviceMessage>(message.ToString());
+
+            if (deviceMessage == null)
+            {
+                Log.Error("invalid deviceMessage: " + message.ToString());
+
+                return;
+            }
+
+            if (deviceMessageListener != null && (deviceMessage.deviceId == null || deviceMessage.deviceId == deviceId))
+            {
+                deviceMessageListener.OnDeviceMessage(deviceMessage);
+
+                return;
+            }
+
+            if (deviceMessage.deviceId == null || deviceMessage.deviceId == deviceId)
+            {
+                HandleDeviceMessage(deviceMessage);
+
+                return;
+            }
         }
 
+        /// <summary>
+        /// Processes a message delivered by the platform.
+        /// </summary>
+        /// <param name="deviceMessage">deviceMessage Indicates the device message delivered.</param>
+        private void HandleDeviceMessage(DeviceMessage deviceMessage)
+        {
+            // Add the device method rebooting function. If the message content is BootstrapRequestTrigger, the device needs to initiate rebooting.
+            if (deviceMessage.content == "BootstrapRequestTrigger" && bootstrapMessageListener != null)
+            {
+                bootstrapMessageListener.OnRetryBootstrapMessage();
+            }
+        }
+        
         private void OnPropertiesSet(RawMessage message)
         {
             string requestId = IotUtil.GetRequestId(message.Topic);
@@ -439,7 +529,7 @@ namespace IoT.SDK.Device.Client
                 return;
             }
 
-            // 只处理直连设备的，子设备的由AbstractGateway处理
+            // Only messages delivered to directly connected devices are processed. Messages delivered to child devices are processed by AbstractGateway.
             if (propertyListener != null && (propsSet.deviceId == null || propsSet.deviceId == this.deviceId))
             {
                 propertyListener.OnPropertiesSet(requestId, propsSet.services);
@@ -471,7 +561,7 @@ namespace IoT.SDK.Device.Client
         }
 
         /// <summary>
-        /// 自定义Topic，下发设备消息
+        /// Called when a device message from a custom topic is received.
         /// </summary>
         /// <param name="message"></param>
         private void OnCustomCommand(RawMessage message)
@@ -479,7 +569,7 @@ namespace IoT.SDK.Device.Client
             deviceCustomMessageListener.OnCustomMessageCommand(message.Payload);
         }
 
-        public virtual void ReportEvent(string deviceId, DeviceEvent evnt)
+		public virtual void ReportEvent(string deviceId, DeviceEvent evnt)
         {
             return;
         }

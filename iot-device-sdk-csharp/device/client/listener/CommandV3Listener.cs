@@ -33,12 +33,12 @@ using IoT.SDK.Device.Client.Requests;
 namespace IoT.SDK.Device.Client.Listener
 {
     /// <summary>
-    /// 命令监听器，用于接收平台下发的V3命令
+    /// Provides a listener to listen to V3 commands delivered by the platform.
     /// </summary>
     public interface CommandV3Listener
     {
         /// <summary>
-        /// 处理命令
+        /// Called when a command is processed.
         /// </summary>
         /// <param name="commandV3"></param>
         void OnCommandV3(CommandV3 commandV3);
