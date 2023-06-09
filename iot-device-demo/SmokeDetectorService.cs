@@ -6,8 +6,8 @@ using Newtonsoft.Json.Linq;
 namespace IoT.Device.Demo
 {
     /// <summary>
-    /// 烟感服务，支持属性：报警标志、烟雾浓度、温度、湿度
-    /// 支持的命令：响铃报警
+    /// Smoke sensor service. Supported properties: alarm flag, smoke density, temperature, and humidity.
+    /// Supported command: ring alarm
     /// </summary>
     public class SmokeDetectorService : AbstractService
     {
@@ -16,7 +16,7 @@ namespace IoT.Device.Demo
             this.SetDeviceService(this);
         }
 
-        // 按照设备模型定义属性，注意属性的name和类型需要和模型一致
+        // Defines propreties based on the product model. Note that the property name and type must be the same as those defined in the product model.
         [Property(Name = "alarm", Writeable = true)]
         public int smokeAlarm { get; set; } = 1;
 
@@ -37,14 +37,14 @@ namespace IoT.Device.Demo
         {
             get
             {
-                // 模拟从传感器读取数据
+                // Simulate data reading from a sensor.
                 return (float)new Random().NextDouble();
             }
         }
 
         /// <summary>
-        /// 定义命令，注意接口入参和返回值类型是固定的不能修改，否则会出现运行时错误
-        /// 方法名和模型命令一致
+        /// Defines a command. Note that the input parameters and return value types of the method are fixed and cannot be modified. Otherwise, a runtime error occurs.
+        /// The method name must be the same as the command name defined in the product model.
         /// </summary>
         /// <param name="jsonParas"></param>
         /// <returns></returns>

@@ -40,7 +40,7 @@ using NLog;
 namespace IoT.SDK.Device.Timesync
 {
     /// <summary>
-    /// 时间同步服务，提供简单的时间同步服务
+    /// Provides time synchronization.
     /// </summary>
     public class TimeSyncService : AbstractService, MessagePublishListener
     {

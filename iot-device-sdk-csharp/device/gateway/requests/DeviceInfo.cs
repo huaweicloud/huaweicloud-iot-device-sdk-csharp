@@ -34,7 +34,7 @@ using Newtonsoft.Json;
 namespace IoT.SDK.Device.Gateway.Requests
 {
     /// <summary>
-    /// 设备信息
+    /// Provides APIs related to device details.
     /// </summary>
     public class DeviceInfo
     {

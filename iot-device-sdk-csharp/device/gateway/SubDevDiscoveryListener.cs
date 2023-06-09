@@ -35,10 +35,10 @@ namespace IoT.SDK.Device.Gateway
     public interface SubDevDiscoveryListener
     {
         /// <summary>
-        /// 平台通知网关扫描子设备
+        /// Instructs the gateway to scan child devices.
         /// </summary>
-        /// <param name="scanSubdeviceNotify">子设备扫描通知</param>
-        /// <returns>0表示处理成功，其他表示处理失败</returns>
+        /// <param name="scanSubdeviceNotify">Indicates a child device scan notification.</param>
+        /// <returns>Returns 0 if the processing is successful; returns other values if the processing fails.</returns>
         int OnScan(ScanSubdeviceNotify scanSubdeviceNotify);
     }
 }

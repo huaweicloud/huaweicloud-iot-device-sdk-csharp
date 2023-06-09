@@ -14,7 +14,7 @@ namespace IoT.Device.Demo
         private IoTDevice device;
 
         /// <summary>
-        /// 通过Postman查询和设置平台属性
+        /// Uses Postman to query and set device properties.
         /// </summary>
         /// <param name="serverUri"></param>
         /// <param name="port"></param>
@@ -22,7 +22,7 @@ namespace IoT.Device.Demo
         /// <param name="deviceSecret"></param>
         public void FunPropertiesSample(string serverUri, int port, string deviceId, string deviceSecret)
         {
-            // 创建设备
+            // Creates a device.
             device = new IoTDevice(serverUri, port, deviceId, deviceSecret);
 
             if (device.Init() != 0)
@@ -48,7 +48,7 @@ namespace IoT.Device.Demo
 
             Dictionary<string, object> json = new Dictionary<string, object>();
 
-            // 按照物模型设置属性
+            // Sets properties based on the product model.
             json["alarm"] = 1;
             json["temperature"] = 23.45813;
             json["humidity"] = 56.89012;
@@ -56,7 +56,7 @@ namespace IoT.Device.Demo
 
             ServiceProperty serviceProperty = new ServiceProperty();
             serviceProperty.properties = json;
-            serviceProperty.serviceId = serviceId; // serviceId要和物模型一致
+            serviceProperty.serviceId = serviceId; // The serviceId must be the same as that defined in the product model.
 
             List<ServiceProperty> properties = new List<ServiceProperty>();
             properties.Add(serviceProperty);

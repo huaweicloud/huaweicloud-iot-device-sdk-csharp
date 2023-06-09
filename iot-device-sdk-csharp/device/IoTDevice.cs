@@ -36,23 +36,23 @@ namespace IoT.SDK.Device
     public class IoTDevice : AbstractDevice
     {
         /// <summary>
-        /// 构造函数，使用密码创建设备
+        /// Constructor used to create an IoTDevice instance. In this method, secret authentication is used.
         /// </summary>
-        /// <param name="serverUri">平台访问地址，比如iot-mqtts.cn-north-4.myhuaweicloud.com</param>
-        /// <param name="port">端口</param>
-        /// <param name="deviceId">设备id</param>
-        /// <param name="deviceSecret">设备密码</param>
+        /// <param name="serverUri">Indicates the device access address, for example, iot-mqtts.cn-north-4.myhuaweicloud.com.</param>
+        /// <param name="port">Indicates the port for device access.</param>
+        /// <param name="deviceId">Indicates a device ID.</param>
+        /// <param name="deviceSecret">Indicates a secret.</param>
         public IoTDevice(string serverUri, int port, string deviceId, string deviceSecret) : base(serverUri, port, deviceId, deviceSecret)
         {
         }
 
         /// <summary>
-        /// X509证书接入
+        /// Constructor used to create an IoTDevice instance. In this method, certificate authentication is used.
         /// </summary>
-        /// <param name="serverUri">平台访问地址，比如iot-mqtts.cn-north-4.myhuaweicloud.com</param>
-        /// <param name="port">端口</param>
-        /// <param name="deviceId">设备id</param>
-        /// <param name="deviceCert">设备证书</param>
+        /// <param name="serverUri">Indicates the device access address, for example, iot-mqtts.cn-north-4.myhuaweicloud.com.</param>
+        /// <param name="port">Indicates the port for device access.</param>
+        /// <param name="deviceId">Indicates a device ID.</param>
+        /// <param name="deviceCert">Indicates the device certificate.</param>
         public IoTDevice(string serverUri, int port, string deviceId, X509Certificate deviceCert) : base(serverUri, port, deviceId, deviceCert)
         {
         }

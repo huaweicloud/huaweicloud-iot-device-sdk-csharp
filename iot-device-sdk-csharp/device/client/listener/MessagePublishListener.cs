@@ -35,13 +35,13 @@ namespace IoT.SDK.Device.Client.Listener
     public interface MessagePublishListener
     {
         /// <summary>
-        /// 消息发布成功事件
+        /// Called when a message is published.
         /// </summary>
         /// <param name="message"></param>
         void OnMessagePublished(RawMessage message);
 
         /// <summary>
-        /// 消息发布失败事件
+        /// Called when a message fails to publish.
         /// </summary>
         /// <param name="message"></param>
         void OnMessageUnPublished(RawMessage message);

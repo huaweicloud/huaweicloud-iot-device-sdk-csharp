@@ -33,7 +33,7 @@ using System.Collections.Generic;
 namespace IoT.SDK.Device.Client.Requests
 {
     /// <summary>
-    /// 设备命令V3
+    /// Provides APIs related to V3 commands.
     /// </summary>
     public class CommandV3
     {

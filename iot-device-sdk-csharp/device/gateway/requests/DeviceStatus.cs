@@ -33,7 +33,7 @@ using Newtonsoft.Json;
 namespace IoT.SDK.Device.Gateway.Requests
 {
     /// <summary>
-    /// 设备状态
+    /// Provides APIs related to device statuses.
     /// </summary>
     public class DeviceStatus
     {

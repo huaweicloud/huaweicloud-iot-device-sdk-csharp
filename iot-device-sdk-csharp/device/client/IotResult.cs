@@ -34,19 +34,19 @@ using Newtonsoft.Json;
 namespace IoT.SDK.Device.Client
 {
     /// <summary>
-    /// 处理结果
+    /// Provides APIs related to the processing result.
     /// </summary>
     public class IotResult
     {
         public static readonly IotResult SUCCESS = new IotResult(0, "Success");
         public static readonly IotResult FAIL = new IotResult(1, "Fail");
         public static readonly IotResult TIMEOUT = new IotResult(2, "Timeout");
-        
+
         /// <summary>
-        /// 处理结果
+        /// Obtains a processing result.
         /// </summary>
-        /// <param name="resultCode">结果码</param>
-        /// <param name="resultDesc">结果描述</param>
+        /// <param name="resultCode">Indicates the result code.</param>
+        /// <param name="resultDesc">Indicates the result description.</param>
         public IotResult(int resultCode, string resultDesc)
         {
             this.resultCode = resultCode;
@@ -54,13 +54,13 @@ namespace IoT.SDK.Device.Client
         }
 
         /// <summary>
-        /// 结果码，0表示成功，其他为失败
+        /// Indicates a result code. The value 0 indicates a success, and other values indicate a failure.
         /// </summary>
         [JsonProperty("result_code")]
         public int resultCode { get; set; }
 
         /// <summary>
-        /// 结果描述
+        /// Indicates a result description.
         /// </summary>
         [JsonProperty("result_desc")]
         public string resultDesc { get; set; }

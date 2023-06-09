@@ -11,7 +11,7 @@ using NLog;
 namespace IoT.Device.Demo
 {
     /// <summary>
-    /// 获取影子数据
+    /// Obtains device shadow data.
     /// </summary>
     public class DeviceShadowSample : DeviceShadowListener
     {
@@ -21,18 +21,18 @@ namespace IoT.Device.Demo
 
         public void FunDeviceShadowSample(string serverUri, int port, string deviceId)
         {
-            // 创建设备
+            // Creates a device.
             string deviceCertPath = IotUtil.GetRootDirectory() + @"\certificate\deviceCert.pfx";
             if (!File.Exists(deviceCertPath))
             {
-                Log.Error("请将设备证书放到根目录！");
+                Log.Error("Place the device certificate in the root directory.");
 
                 return;
             }
 
             X509Certificate2 deviceCert = new X509Certificate2(deviceCertPath, "123456");
 
-            // 使用证书创建设备，X509证书接入
+            // Creates a device with X509Certificate2.
             device = new IoTDevice(serverUri, port, deviceId, deviceCert);
 
             if (device.Init() != 0)

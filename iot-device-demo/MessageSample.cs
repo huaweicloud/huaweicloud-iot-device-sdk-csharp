@@ -12,7 +12,7 @@ namespace IoT.Device.Demo
     {
         public void FunMessageSample(string serverUri, int port, string deviceId, string deviceSecret)
         {
-            // 创建设备
+            // Creates a device.
             IoTDevice device = new IoTDevice(serverUri, port, deviceId, deviceSecret);
 
             if (device.Init() != 0)
@@ -24,7 +24,7 @@ namespace IoT.Device.Demo
             device.GetClient().deviceCustomMessageListener = this;
             device.GetClient().messagePublishListener = this;
 
-            // 上报自定义topic消息，注意需要先在平台配置自定义topic,并且topic的前缀已经规定好，固定为：$oc/devices/{device_id}/user/，通过Postman模拟应用侧使用自定义Topic进行命令下发。
+            // Reports a message with a custom topic. You must configure the custom topic on the platform and set the topic prefix to $oc/devices/{device_id}/user/. Use Postman to simulate the scenario in which an application uses the custom topic to deliver a command.
             string suf_topic = "wpy";
             device.GetClient().SubscribeTopic(suf_topic);
 

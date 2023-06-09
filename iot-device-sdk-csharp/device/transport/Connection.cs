@@ -36,38 +36,38 @@ namespace IoT.SDK.Device.Transport
     internal interface Connection
     {
         /// <summary>
-        /// 建立连接
+        /// Creates a connection.
         /// </summary>
-        /// <returns>连接建立结果，0表示成功，其他表示失败</returns>
+        /// <returns>Returns 0 if the connection is established; returns other values if the connection fails to be established.</returns>
         int Connect();
 
         /// <summary>
-        /// 发布消息
+        /// Publishes a message.
         /// </summary>
-        /// <param name="message">消息</param>
+        /// <param name="message">Indicates the message to publish.</param>
         void PublishMessage(RawMessage message);
 
         /// <summary>
-        /// 关闭连接
+        /// Closes the connection.
         /// </summary>
         void Close();
 
         /// <summary>
-        /// 是否连接中
+        /// Checks whether the device is connected to the platform.
         /// </summary>
-        /// <returns>true表示在连接中，false表示断连</returns>
+        /// <returns>Returns true if the device is connected to the platform; returns false otherwise.</returns>
         bool IsConnected();
 
         /// <summary>
-        /// 设置连接监听器
+        /// Sets a connection listener.
         /// </summary>
-        /// <param name="connectListener">连接监听器</param>
+        /// <param name="connectListener">Indicates the listener to set.</param>
         void SetConnectListener(ConnectListener connectListener);
 
         /// <summary>
-        /// 订阅Topic
+        /// Subscribes to a topic.
         /// </summary>
-        /// <param name="listTopic">订阅自定义topic。注意SDK会自动订阅平台定义的topic</param>
+        /// <param name="listTopic">Indicates the custom topic to subscribe. The SDK automatically subscribes to system topics.</param>
         void SubscribeTopic(List<MqttTopicFilter> listTopic);
     }
 }

@@ -36,7 +36,7 @@ namespace IoT.SDK.Device.Utils
     public static class EncryptUtil
     {
         /// <summary>
-        /// 加密算法HmacSHA256
+        /// Encrypts a string using HMAC-SHA256.
         /// </summary>
         /// <param name="secret"></param>
         /// <param name="signTimestampKey"></param>
@@ -55,7 +55,7 @@ namespace IoT.SDK.Device.Utils
         }
 
         /// <summary>
-        /// byte[]转16进制格式string
+        /// Converts a byte array to a hexadecimal string.
         /// </summary>
         /// <param name="hashBytes"></param>
         /// <returns></returns>

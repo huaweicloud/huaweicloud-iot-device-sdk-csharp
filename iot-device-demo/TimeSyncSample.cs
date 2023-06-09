@@ -9,7 +9,7 @@ namespace IoT.Device.Demo
     {
         public void FunTimeSyncSample(string serverUri, int port, string deviceId, string deviceSecret)
         {
-            // 创建设备
+            // Creates a device.
             IoTDevice device = new IoTDevice(serverUri, port, deviceId, deviceSecret);
 
             if (device.Init() != 0)
@@ -33,9 +33,9 @@ namespace IoT.Device.Demo
 
         public DateTime StampToDatetime(long timeStamp)
         {
-            var startTime = TimeZoneInfo.ConvertTime(new DateTime(1970, 1, 1), TimeZoneInfo.Utc, TimeZoneInfo.Local); // 当地时区
+            var startTime = TimeZoneInfo.ConvertTime(new DateTime(1970, 1, 1), TimeZoneInfo.Utc, TimeZoneInfo.Local); // Current time zone
 
-            // 返回转换后的日期
+            // Returns the date after the conversion.
             return startTime.AddMilliseconds(timeStamp);
         }
     }

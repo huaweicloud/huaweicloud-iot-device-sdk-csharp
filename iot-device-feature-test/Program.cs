@@ -15,6 +15,11 @@ namespace IoT.Device.Feature.Test
             string deviceX509Id = "5eb4cd4049a5ab087d7d4861_x509_demo";
             string deviceSecret = "secret";
 
+            string bootstrapUri = "iot-bs.cn-north-4.myhuaweicloud.com";
+            string bDeviceId = "5eb4cd4049a5ab087d7d4861_lfd_test1343";
+            string bDeviceX509Id = "5eb4cd4049a5ab087d7d4861_lfd_test_x509_1121";
+            string bSecret = "7fa51ddf6f1b2c99ee20";
+
             ////MessageSample ms = new MessageSample();
             ////ms.FunMessageSample(serverUri, 1883, deviceId, deviceSecret);
 
@@ -41,9 +46,18 @@ namespace IoT.Device.Feature.Test
 
             ////SmokeDetector sd = new SmokeDetector();
             ////sd.FunSmokeDetector(serverUri, 8883, deviceId, deviceSecret);
-            
+
             ////new StringTcpServer(serverUri, 8883, deviceId, deviceSecret);
 
+            ////BootstrapSample bs = new BootstrapSample();
+            ////bs.FunBootstrapSample(bootstrapUri, 8883, bDeviceId, bSecret);
+
+            ////BootsrapSelfRegSample bsr = new BootsrapSelfRegSample();
+            ////bsr.FunBootsrapSelfRegSample(bootstrapUri, 8883, bDeviceX509Id);
+
+            ////BootsrapGroupRegSample bgrs = new BootsrapGroupRegSample();
+            ////bgrs.FunBootsrapGroupRegSample(bootstrapUri, 8883, "yourDeviceId", "yourScopeId");
+            
             mre.WaitOne();
         }
     }

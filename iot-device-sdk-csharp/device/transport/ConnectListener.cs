@@ -31,22 +31,22 @@
 namespace IoT.SDK.Device.Transport
 {
     /// <summary>
-    /// 连接监听器
+    /// Provides listeners to listen to connections between the platform and devices.
     /// </summary>
     public interface ConnectListener
     {
         /// <summary>
-        /// 连接丢失通知
+        /// Called when the connection is lost.
         /// </summary>
         void ConnectionLost();
 
         /// <summary>
-        /// 连接成功通知
+        /// Called when the connection is complete.
         /// </summary>
         void ConnectComplete();
 
         /// <summary>
-        /// 连接失败通知
+        /// Called when the connection fails.
         /// </summary>
         void ConnectFail();
     }

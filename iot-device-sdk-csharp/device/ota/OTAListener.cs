@@ -31,19 +31,25 @@
 namespace IoT.SDK.Device.OTA
 {
     /// <summary>
-    /// OTA监听器
+    /// Provides listeners to listen to OTA upgrades.
     /// </summary>
     public interface OTAListener
     {
         /// <summary>
-        /// 接收查询版本通知
+        /// Called when a version query request is received.
         /// </summary>
         void OnQueryVersion();
 
         /// <summary>
-        /// 接收新版本通知
+        /// Called when a new upgrade package is received.
         /// </summary>
-        /// <param name="pkg">新版本包信息</param>
+        /// <param name="pkg">Indicates the new version package.</param>
         void OnNewPackage(OTAPackage pkg);
+
+        /// <summary>
+        /// Called when a new upgrade package is received.
+        /// </summary>
+        /// <param name="pkgV2">Indicates the new version package.</param>
+        void OnNewPackageV2(OTAPackageV2 pkgV2);
     }
 }

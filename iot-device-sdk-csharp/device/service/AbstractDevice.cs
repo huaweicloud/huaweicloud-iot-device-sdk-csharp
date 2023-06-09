@@ -33,6 +33,7 @@ using System.Security.Cryptography.X509Certificates;
 using IoT.SDK.Device.Client;
 using IoT.SDK.Device.Client.Requests;
 using IoT.SDK.Device.OTA;
+using IoT.SDK.Device.Sdkinfo;
 using IoT.SDK.Device.Timesync;
 using IoT.SDK.Device.Transport;
 using IoT.SDK.Device.Utils;
@@ -41,7 +42,7 @@ using NLog;
 namespace IoT.SDK.Device.Service
 {
     /// <summary>
-    /// 抽象设备类
+    /// An abstract device class.
     /// </summary>
     public class AbstractDevice
     {
@@ -50,14 +51,14 @@ namespace IoT.SDK.Device.Service
         private DeviceClient client;
 
         private Dictionary<string, AbstractService> services = new Dictionary<string, AbstractService>();
-        
+
         /// <summary>
-        /// 构造函数，使用密码创建设备
+        /// Constructor used to create an AbstractDevice object. In this method, secret authentication is used.
         /// </summary>
-        /// <param name="serverUri">平台访问地址，比如iot-mqtts.cn-north-4.myhuaweicloud.com</param>
-        /// <param name="port">端口</param>
-        /// <param name="deviceId">设备id</param>
-        /// <param name="deviceSecret">设备密码</param>
+        /// <param name="serverUri">Indicates the device access address, for example, iot-mqtts.cn-north-4.myhuaweicloud.com.</param>
+        /// <param name="port">Indicates the port for device access.</param>
+        /// <param name="deviceId">Indicates a device ID.</param>
+        /// <param name="deviceSecret">Indicates a secret.</param>
         public AbstractDevice(string serverUri, int port, string deviceId, string deviceSecret)
         {
             ClientConf clientConf = new ClientConf();
@@ -72,7 +73,7 @@ namespace IoT.SDK.Device.Service
         }
 
         /// <summary>
-        /// 构造函数，使用证书创建设备
+        /// Constructor used to create an AbstractDevice object. In this method, certificate authentication is used.
         /// </summary>
         /// <param name="serverUri"></param>
         /// <param name="port"></param>
@@ -96,12 +97,14 @@ namespace IoT.SDK.Device.Service
         public OTAService otaService { get; set; }
 
         public TimeSyncService timeSyncService { get; set; }
-        
+
+        public SdkInfoService sdkInfoService { get; set; }
+
         /// <summary>
-        /// 添加服务。用户基于AbstractService定义自己的设备服务，并添加到设备
+        /// Adds a service. You can use AbstractService to define your device service and add the service to the device.
         /// </summary>
-        /// <param name="serviceId">服务id，要和设备模型定义一致</param>
-        /// <param name="deviceService">服务实例</param>
+        /// <param name="serviceId">Indicates a service ID, which must be defined in the device model.</param>
+        /// <param name="deviceService">Indicates the service to add.</param>
         public void AddService(string serviceId, AbstractService deviceService)
         {
             deviceService.iotDevice = this;
@@ -110,28 +113,28 @@ namespace IoT.SDK.Device.Service
         }
 
         /// <summary>
-        /// 初始化，创建到平台的连接
+        /// Creates a connection to the platform.
         /// </summary>
-        /// <returns>如果连接成功，返回0；否则返回-1</returns>
+        /// <returns>Returns 0 if the connection is successful; returns -1 otherwise.</returns>
         public int Init()
         {
             return client.Connect();
         }
 
         /// <summary>
-        /// 获取设备客户端。获取到设备客户端后，可以直接调用客户端提供的消息、属性、命令等接口
+        /// Obtains a device client. After a device client is obtained, you can call the message, property, and message APIs provided by the device client.
         /// </summary>
-        /// <returns>设备客户端实例</returns>
+        /// <returns>Returns a DeviceClient instance.</returns>
         public virtual DeviceClient GetClient()
         {
             return client;
         }
 
         /// <summary>
-        /// 命令回调函数，由SDK自动调用
+        /// Called when a command is received. This method is automatically called by the SDK.
         /// </summary>
-        /// <param name="requestId">请求ID</param>
-        /// <param name="command">命令</param>
+        /// <param name="requestId">Indicates a request ID.</param>
+        /// <param name="command">Indicates a command.</param>
         public virtual void OnCommand(string requestId, Command command)
         {
             IService service = this.GetService(command.serviceId);
@@ -144,10 +147,10 @@ namespace IoT.SDK.Device.Service
         }
 
         /// <summary>
-        /// 查询服务
+        /// Obtains a service.
         /// </summary>
-        /// <param name="serviceId">服务ID</param>
-        /// <returns>服务实例</returns>
+        /// <param name="serviceId">Indicates the service ID.</param>
+        /// <returns>Returns an AbstractService instance.</returns>
         public AbstractService GetService(string serviceId)
         {
             if (!services.ContainsKey(serviceId))
@@ -159,12 +162,12 @@ namespace IoT.SDK.Device.Service
         }
 
         /// <summary>
-        /// 事件回调，由SDK自动调用
+        /// Called when events are received. This method is automatically called by the SDK.
         /// </summary>
-        /// <param name="deviceEvents">设备事件</param>
+        /// <param name="deviceEvents">Indicates the events.</param>
         public virtual void OnEvent(DeviceEvents deviceEvents)
         {
-            // 子设备的
+            // For a sub device
             if (deviceEvents.deviceId != null && deviceEvents.deviceId != this.deviceId)
             {
                 return;
@@ -181,15 +184,15 @@ namespace IoT.SDK.Device.Service
         }
 
         /// <summary>
-        /// 属性查询回调，由SDK自动调用
+        /// Called when a property query request is received. This method is automatically called by the SDK.
         /// </summary>
-        /// <param name="requestId">请求ID</param>
-        /// <param name="propsGet">属性查询请求</param>
+        /// <param name="requestId">Indicates a request ID.</param>
+        /// <param name="propsGet">Indicates the property query request.</param>
         public void OnPropertiesGet(string requestId, PropsGet propsGet)
         {
             List<ServiceProperty> serviceProperties = new List<ServiceProperty>();
 
-            // 查询所有
+            // Queries all service IDs.
             if (propsGet.serviceId == null)
             {
                 foreach (KeyValuePair<string, AbstractService> kv in services)
@@ -223,10 +226,10 @@ namespace IoT.SDK.Device.Service
         }
 
         /// <summary>
-        /// 属性设置回调，，由SDK自动调用
+        /// Called when a property setting request is received. This method is automatically called by the SDK.
         /// </summary>
-        /// <param name="requestId">请求ID</param>
-        /// <param name="propsSet">属性设置请求</param>
+        /// <param name="requestId">Indicates a request ID.</param>
+        /// <param name="propsSet">Indicates the property setting request.</param>
         public void OnPropertiesSet(string requestId, PropsSet propsSet)
         {
             foreach (ServiceProperty serviceProp in propsSet.services)
@@ -235,7 +238,7 @@ namespace IoT.SDK.Device.Service
 
                 if (deviceService != null)
                 {
-                    // 如果部分失败直接返回
+                    // Returns the result for partial failure.
                     IotResult result = deviceService.OnWrite(serviceProp.properties);
                     if (result.resultCode != IotResult.SUCCESS.resultCode)
                     {
@@ -248,12 +251,12 @@ namespace IoT.SDK.Device.Service
 
             client.RespondPropsSet(requestId, IotResult.SUCCESS);
         }
-        
+
         /// <summary>
-        /// 触发属性变化，SDK会上报变化的属性
+        /// Reports a property change for a specific service. The SDK reports the changed properties.
         /// </summary>
-        /// <param name="serviceId">服务id</param>
-        /// <param name="properties">属性列表</param>
+        /// <param name="serviceId">Indicates the service ID.</param>
+        /// <param name="properties">Indicates the properties.</param>
         internal void FirePropertiesChanged(string serviceId, string[] properties)
         {
             AbstractService deviceService = GetService(serviceId);
@@ -276,7 +279,7 @@ namespace IoT.SDK.Device.Service
         }
 
         /// <summary>
-        /// 初始化系统默认service，系统service以$作为开头
+        /// Initializes the default system service, which starts with a dollar sign ($).
         /// </summary>
         private void InitSysServices()
         {

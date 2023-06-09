@@ -31,43 +31,43 @@
 namespace IoT.SDK.Device.Client.Requests
 {
     /// <summary>
-    /// 设备消息
+    /// Provides APIs related to device messages.
     /// </summary>
     public class DeviceMessage
     {
         /// <summary>
-        /// 默认构造函数
+        /// Default constructor used to create a DeviceMessage object.
         /// </summary>
         public DeviceMessage()
         {
         }
 
         /// <summary>
-        /// 构造函数
+        /// Constructor used to create a DeviceMessage object.
         /// </summary>
-        /// <param name="message">消息内容</param>
+        /// <param name="message">Indicates the message content.</param>
         public DeviceMessage(string message)
         {
             content = message;
         }
 
         /// <summary>
-        /// 消息具体内容
+        /// Indicates the message content.
         /// </summary>
         public string content { get; set; }
 
         /// <summary>
-        /// 设备id，可选，默认为客户端本身的设备id
+        /// Indicates a device ID. It is optional. The default value is the device ID of the client.
         /// </summary>
         public string deviceId { get; set; }
 
         /// <summary>
-        /// 消息名，可选
+        /// Indicates a message name. It is optional.
         /// </summary>
         public string name { get; set; }
 
         /// <summary>
-        /// 消息id，可选
+        /// Indicates a message ID. It is optional.
         /// </summary>
         public string id { get; set; }
     }

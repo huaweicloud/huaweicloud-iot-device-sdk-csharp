@@ -32,20 +32,23 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using IoT.SDK.Device.Exceptions;
 using NLog;
 
 namespace IoT.SDK.Device.Utils
 {
     /// <summary>
-    /// IOT工具类
+    /// Provides an IoT utility class.
     /// </summary>
     public class IotUtil
     {
         private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
+        private static Mutex mutex = new Mutex(false);
+
         /// <summary>
-        /// 从topic里解析出requestId
+        /// Obtains the request ID from a topic.
         /// </summary>
         /// <param name="topic"></param>
         /// <returns></returns>
@@ -70,11 +73,11 @@ namespace IoT.SDK.Device.Utils
 
             return requestId;
         }
-        
+
         /// <summary>
-        /// 获取证书
+        /// Obtains a certificate.
         /// </summary>
-        /// <param name="path">证书路径</param>
+        /// <param name="path">Indicates the certificate path.</param>
         /// <returns></returns>
         public static X509Certificate GetCert(string path)
         {
@@ -84,9 +87,9 @@ namespace IoT.SDK.Device.Utils
         }
 
         /// <summary>
-        /// 获取当前事件时间
+        /// Obtains the current event time.
         /// </summary>
-        /// <returns>当前事件时间</returns>
+        /// <returns>Returns the event time.</returns>
         public static string GetEventTime()
         {
             DateTime dt = TimeZoneInfo.ConvertTimeToUtc(DateTime.Now, TimeZoneInfo.Local);
@@ -94,9 +97,9 @@ namespace IoT.SDK.Device.Utils
         }
 
         /// <summary>
-        /// 获取当前时间戳
+        /// Obtains the current timestamp.
         /// </summary>
-        /// <returns>时间戳字符串</returns>
+        /// <returns>Returns a string reprensenting the timestamp.</returns>
         public static string GetTimeStamp()
         {
             TimeSpan timeSpan = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, 0);
@@ -116,10 +119,10 @@ namespace IoT.SDK.Device.Utils
         }
 
         /// <summary>
-        /// 从deviceid解析nodeId
+        /// Obtains the node ID from a device ID.
         /// </summary>
-        /// <param name="deviceId">设备ID</param>
-        /// <returns>设备物理标识</returns>
+        /// <param name="deviceId">Indicates the device ID.</param>
+        /// <returns>Returns the node ID.</returns>
         public static String GetNodeIdFromDeviceId(string deviceId)
         {
             try
@@ -135,13 +138,64 @@ namespace IoT.SDK.Device.Utils
         }
 
         /// <summary>
-        /// 获取程序启动路径
+        /// Obtains the root directory of the SDK.
         /// </summary>
         /// <returns></returns>
         public static string GetRootDirectory()
         {
             return Directory.GetCurrentDirectory();
         }
+
+        public static string ReadJsonFile(string path)
+        {
+            mutex.WaitOne();
+
+            StreamReader streamReader = null;
+
+            string content = string.Empty;
+
+            try
+            {
+                streamReader = new StreamReader(path);
+
+                content = streamReader.ReadToEnd();
+
+                streamReader.Close();
+            }
+            catch (Exception ex)
+            {
+                Log.Error("read json file fail");
+            }
+            finally
+            {
+                if (streamReader != null)
+                {
+                    streamReader.Close();
+                }
+
+                mutex.ReleaseMutex();
+            }
+
+            return content;
+        }
+
+        public static void WriteJsonFile(string path, string content)
+        {
+            mutex.WaitOne();
+            try
+            {
+                File.WriteAllText(path, content);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("write json file fail");
+            }
+            finally
+            {
+                mutex.ReleaseMutex();
+            }
+        }
+
         /// <summary>
         /// Obtains the device ID from a topic
         /// </summary>

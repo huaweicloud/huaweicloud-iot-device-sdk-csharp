@@ -41,7 +41,7 @@ using NLog;
 namespace IoT.SDK.Device.Gateway
 {
     /// <summary>
-    /// 抽象网关，实现了子设备管理，子设备消息转发功能
+    /// An abstract gateway that implements device management and message forwarding of child devices.
     /// </summary>
     public abstract class AbstractGateway : IoTDevice, ConnectListener
     {
@@ -52,13 +52,13 @@ namespace IoT.SDK.Device.Gateway
         private SubDevicesPersistence subDevicesPersistence;
 
         /// <summary>
-        /// 构造函数，通过设备密码认证
+        /// Constructor used to create an AbstractGateway object. In this method, secret authentication is used.
         /// </summary>
-        /// <param name="subDevicesPersistence">子设备持久化，提供子设备信息保存能力</param>
-        /// <param name="serverUri">平台访问地址</param>
-        /// <param name="port">端口</param>
-        /// <param name="deviceId">设备id</param>
-        /// <param name="deviceSecret">设备秘钥</param>
+        /// <param name="subDevicesPersistence">Indicates the persistence of child device details.</param>
+        /// <param name="serverUri">Indicates the device access address.</param>
+        /// <param name="port">Indicates the port for device access.</param>
+        /// <param name="deviceId">Indicates the device ID.</param>
+        /// <param name="deviceSecret">Indicates the secret.</param>
         public AbstractGateway(SubDevicesPersistence subDevicesPersistence, string serverUri, int port, string deviceId, string deviceSecret) : base(serverUri, port, deviceId, deviceSecret)
         {
             this.subDevicesPersistence = subDevicesPersistence;
@@ -74,10 +74,10 @@ namespace IoT.SDK.Device.Gateway
         }
 
         /// <summary>
-        /// 根据设备标识码查询子设备
+        /// Obtains a child device by node ID.
         /// </summary>
-        /// <param name="nodeId">设备标识码</param>
-        /// <returns>子设备信息</returns>
+        /// <param name="nodeId">Indicates the node ID.</param>
+        /// <returns>Returns the child device details.</returns>
         public DeviceInfo GetSubDeviceByNodeId(string nodeId)
         {
             return subDevicesPersistence.GetSubDevice(nodeId);
@@ -85,7 +85,7 @@ namespace IoT.SDK.Device.Gateway
 
         public void ConnectComplete()
         {
-            // 建连或重连时，向平台同步子设备信息
+            // Synchronizes child device details to the platform during connection or reconnection.
             SyncSubDevices();
         }
 
@@ -96,21 +96,21 @@ namespace IoT.SDK.Device.Gateway
         public void ConnectionLost()
         {
         }
-        
+
         /// <summary>
-        /// 上报子设备消息
+        /// Reports a child device message.
         /// </summary>
-        /// <param name="deviceMessage">设备消息</param>
+        /// <param name="deviceMessage">Indicates the message to report.</param>
         public void ReportSubDeviceMessage(DeviceMessage deviceMessage)
         {
             GetClient().ReportDeviceMessage(deviceMessage);
         }
 
         /// <summary>
-        /// 上报子设备属性
+        /// Reports properties for a child device.
         /// </summary>
-        /// <param name="deviceId">设备ID</param>
-        /// <param name="services">服务属性列表</param>
+        /// <param name="deviceId">Indicates the ID of the child device.</param>
+        /// <param name="services">Indicates the properties to report.</param>
         public void ReportSubDeviceProperties(string deviceId, List<ServiceProperty> services)
         {
             DeviceProperty deviceProperty = new DeviceProperty();
@@ -123,9 +123,9 @@ namespace IoT.SDK.Device.Gateway
         }
 
         /// <summary>
-        /// 批量上报子设备属性
+        /// Reports properties for a batches of child devices.
         /// </summary>
-        /// <param name="deviceProperties">子设备属性列表</param>
+        /// <param name="deviceProperties">Indicates the properties to report.</param>
         public void ReportSubDeviceProperties(List<DeviceProperty> deviceProperties)
         {
             string msg = "{\"devices\":" + JsonUtil.ConvertObjectToJsonString(deviceProperties) + "}";
@@ -134,10 +134,10 @@ namespace IoT.SDK.Device.Gateway
         }
 
         /// <summary>
-        /// 上报子设备状态
+        /// Reports the status for a child device.
         /// </summary>
-        /// <param name="deviceId">子设备ID</param>
-        /// <param name="status">设备状态</param>
+        /// <param name="deviceId">Indicates the ID of the child device.</param>
+        /// <param name="status">Indicates the status to report.</param>
         public void ReportSubDeviceStatus(string deviceId, string status)
         {
             DeviceStatus deviceStatus = new DeviceStatus();
@@ -151,9 +151,9 @@ namespace IoT.SDK.Device.Gateway
         }
 
         /// <summary>
-        /// 批量上报子设备状态
+        /// Reports the statuses for a batch of child devices.
         /// </summary>
-        /// <param name="statuses">子设备状态列表</param>
+        /// <param name="statuses">Indicates the statuses to report.</param>
         public void ReportSubDeviceStatus(List<DeviceStatus> statuses)
         {
             DeviceEvent deviceEvent = new DeviceEvent();
@@ -168,9 +168,9 @@ namespace IoT.SDK.Device.Gateway
         }
 
         /// <summary>
-        /// 设备侧添加子设备
+        /// Add sub device on device side.
         /// </summary>
-        /// <param name="subDeviceInfo">待新增的子设备信息列表，单次增加最大不超过50个设备</param>
+        /// <param name="subDeviceInfo">Indicates the list of sub device information to be added, with a maximum of 50 devices added at a time.</param>
         public void ReportAddSubDevice(List<DeviceInfo> subDeviceInfo)
         {
             DeviceEvent deviceEvent = new DeviceEvent();
@@ -185,9 +185,9 @@ namespace IoT.SDK.Device.Gateway
         }
 
         /// <summary>
-        /// 设备侧删除子设备
+        /// Delete sub device on device side.
         /// </summary>
-        /// <param name="devicesId">待删除的子设备（设备id）列表，单次删除最大不超过50个设备</param>
+        /// <param name="devicesId">Indicates the list of sub devices (device ID) to be deleted, with a maximum of 50 devices to be deleted.</param>
         public void ReportDeleteSubDevice(List<string> devicesId)
         {
             DeviceEvent deviceEvent = new DeviceEvent();
@@ -235,13 +235,13 @@ namespace IoT.SDK.Device.Gateway
         }
 
         /// <summary>
-        /// 命令处理回调
+        /// Called when command processing.
         /// </summary>
-        /// <param name="requestId">请求id</param>
-        /// <param name="command">命令</param>
+        /// <param name="requestId">Indicates a request ID.</param>
+        /// <param name="command">Indicates the command.</param>
         public override void OnCommand(string requestId, Command command)
         {
-            // 子设备的
+            // Sub device.
             if (command.deviceId != null && command.deviceId != this.deviceId)
             {
                 this.OnSubdevCommand(requestId, command);
@@ -249,15 +249,15 @@ namespace IoT.SDK.Device.Gateway
                 return;
             }
 
-            // 网关的
+            // Gateway
             base.OnCommand(requestId, command);
         }
 
         /// <summary>
-        /// 添加子设备处理回调，子类可以重写此接口进行扩展
+        /// Called when a child device addition request is processed. Child classes can override this method.
         /// </summary>
-        /// <param name="subDevicesInfo">子设备信息</param>
-        /// <returns>处理结果，0表示成功</returns>
+        /// <param name="subDevicesInfo">Indicates the child device details.</param>
+        /// <returns>Returns 0 if the processing is successful; returns other values if the processing fails.</returns>
         public int OnAddSubDevices(SubDevicesInfo subDevicesInfo)
         {
             if (subDevicesPersistence != null)
@@ -269,10 +269,10 @@ namespace IoT.SDK.Device.Gateway
         }
 
         /// <summary>
-        /// 删除子设备处理回调，子类可以重写此接口进行扩展
+        /// Called when a child device deletion request is processed. Child classes can override this method.
         /// </summary>
-        /// <param name="subDevicesInfo">子设备信息</param>
-        /// <returns>处理结果，0表示成功</returns>
+        /// <param name="subDevicesInfo">Indicates the child device details.</param>
+        /// <returns>Returns 0 if the processing is successful; returns other values if the processing fails.</returns>
         public virtual int OnDeleteSubDevices(SubDevicesInfo subDevicesInfo)
         {
             if (subDevicesPersistence != null)
@@ -282,36 +282,36 @@ namespace IoT.SDK.Device.Gateway
 
             return -1;
         }
-        
+
         /// <summary>
-        /// 子设备命令下发处理，网关需要转发给子设备，需要子类实现
+        /// Called when a command delivered to a child device is processed. The gateway must forward such a command to the child device. This method must be implemented by the child class.
         /// </summary>
-        /// <param name="requestId">请求Id</param>
-        /// <param name="command">命令</param>
+        /// <param name="requestId">Indicates a request ID.</param>
+        /// <param name="command">Indicates the command.</param>
         public abstract void OnSubdevCommand(string requestId, Command command);
 
         /// <summary>
-        /// 子设备属性设置，网关需要转发给子设备，需要子类实现
+        /// Called when a property setting request delivered to a child device is processed. The gateway must forward such a request to the child device. This method must be implemented by the child class.
         /// </summary>
-        /// <param name="requestId">请求ID</param>
-        /// <param name="propsSet">属性设置</param>
+        /// <param name="requestId">Indicates a request ID.</param>
+        /// <param name="propsSet">Indicates the properties to set.</param>
         public abstract void OnSubdevPropertiesSet(string requestId, PropsSet propsSet);
 
         /// <summary>
-        /// 子设备读属性，网关需要转发给子设备，需要子类实现
+        /// Called when a property query request delivered to a child device is processed. The gateway must forward such a request to the child device. This method must be implemented by the child class.
         /// </summary>
-        /// <param name="requestId">请求ID</param>
-        /// <param name="propsGet">属性查询</param>
+        /// <param name="requestId">Indicates a request ID.</param>
+        /// <param name="propsGet">Indicates the properties to query.</param>
         public abstract void OnSubdevPropertiesGet(string requestId, PropsGet propsGet);
 
         /// <summary>
-        /// 子设备消息下发，网关需要转发给子设备，需要子类实现
+        /// Called when a message delivered to a child device is processed. The gateway must forward such a message to the child device. This method must be implemented by the child class.
         /// </summary>
-        /// <param name="message">设备消息</param>
+        /// <param name="message">Indicates the message.</param>
         public abstract void OnSubdevMessage(DeviceMessage message);
 
         /// <summary>
-        /// 向平台请求同步子设备信息
+        /// Synchronizes child device details to the platform.
         /// </summary>
         protected void SyncSubDevices()
         {

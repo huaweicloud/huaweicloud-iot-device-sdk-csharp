@@ -33,17 +33,17 @@ namespace IoT.SDK.Device.Exceptions
     public enum BaseExceptionEnum
     {
         /// <summary>
-        /// file is not existed
+        /// The file does not exist.
         /// </summary>
         BASE_FILE_NOT_EXISTED = 001,
 
         /// <summary>
-        /// the topic is null
+        /// The topic is null.
         /// </summary>
         BASE_TOPIC_IS_NULL = 002,
 
         /// <summary>
-        /// no request id
+        /// No request ID is available.
         /// </summary>
         BASE_TOPIC_INVALID_NO_REQUEST_ID = 003,
 

@@ -34,22 +34,22 @@ using IoT.SDK.Device.Client.Requests;
 namespace IoT.SDK.Device.Client.Listener
 {
     /// <summary>
-    /// 属性监听器，用于接收平台下发的属性读写操作
+    /// Provides a listener to listen to property read/write operations delivered by the platform.
     /// </summary>
     public interface PropertyListener
     {
         /// <summary>
-        /// 处理写属性操作
+        /// Called when a property setting request is processed.
         /// </summary>
-        /// <param name="requestId">请求ID</param>
-        /// <param name="services">服务属性列表</param>
+        /// <param name="requestId">Indicates the request ID.</param>
+        /// <param name="services">Indicates the service properties.</param>
         void OnPropertiesSet(string requestId, List<ServiceProperty> services);
 
         /// <summary>
-        /// 处理读属性操作
+        /// Called when a property query request is processed.
         /// </summary>
-        /// <param name="requestId">请求ID</param>
-        /// <param name="serviceId">服务ID，可选</param>
+        /// <param name="requestId">Indicates the request ID.</param>
+        /// <param name="serviceId">Indicates the service ID. It is optional.</param>
         void OnPropertiesGet(string requestId, string serviceId);
     }
 }
