@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2020-2022 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2020-2023 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -84,6 +84,8 @@ namespace IoT.SDK.Device.Client
         public MessagePublishListener messagePublishListener { get; set; }
         
         public PropertyListener propertyListener { get; set; }
+
+        public RawDeviceMessageListener rawDeviceMessageListener { get; set; }
 
         public DeviceMessageListener deviceMessageListener { get; set; }
 
@@ -482,27 +484,28 @@ namespace IoT.SDK.Device.Client
 
         private void OnDeviceMessage(RawMessage message)
         {
-            DeviceMessage deviceMessage = JsonUtil.ConvertJsonStringToObject<DeviceMessage>(message.ToString());
-
-            if (deviceMessage == null)
+            RawDeviceMessage rawDeviceMessage = new RawDeviceMessage(message.BinPayload);
+            if (rawDeviceMessageListener != null)
             {
-                Log.Error("invalid deviceMessage: " + message.ToString());
-
-                return;
+                rawDeviceMessageListener.OnRawDeviceMessage(rawDeviceMessage);
             }
 
-            if (deviceMessageListener != null && (deviceMessage.deviceId == null || deviceMessage.deviceId == deviceId))
-            {
-                deviceMessageListener.OnDeviceMessage(deviceMessage);
 
-                return;
+            DeviceMessage deviceMessage = rawDeviceMessage.ToDeviceMessage();
+            if (deviceMessage == null)
+            {
+                return; // isn't system format
             }
 
             if (deviceMessage.deviceId == null || deviceMessage.deviceId == deviceId)
             {
-                HandleDeviceMessage(deviceMessage);
+                if (deviceMessageListener != null)
+                {
+                    deviceMessageListener.OnDeviceMessage(deviceMessage);
+                    return;
+                }
 
-                return;
+                HandleDeviceMessage(deviceMessage);
             }
         }
 

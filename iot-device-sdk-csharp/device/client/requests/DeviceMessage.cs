@@ -28,6 +28,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using Newtonsoft.Json;
+
 namespace IoT.SDK.Device.Client.Requests
 {
     /// <summary>
@@ -59,6 +61,7 @@ namespace IoT.SDK.Device.Client.Requests
         /// <summary>
         /// Indicates a device ID. It is optional. The default value is the device ID of the client.
         /// </summary>
+        [JsonProperty("object_device_id")]
         public string deviceId { get; set; }
 
         /// <summary>

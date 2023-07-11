@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2023-2023 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -28,20 +28,20 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System.Threading;
-using IoT.Gateway.Demo;
+using IoT.SDK.Device.Client.Requests;
 
-namespace IoT.TCP.Device.Test
+namespace IoT.SDK.Device.Client.Listener
 {
-    class Program
+    /// <summary>
+    /// Provides a listener to listen to commands delivered by the platform.
+    /// </summary>
+    public interface RawDeviceMessageListener
     {
-        private static ManualResetEvent mre = new ManualResetEvent(false);
-
-        static void Main(string[] args)
-        {
-            new TcpDevice("localhost", 8080);
-
-            mre.WaitOne();
-        }
+        /// <summary>
+        /// Called when a device message delivered by the platform is received.
+        /// </summary>
+        /// <param name="rawDeviceMessage">Indicates the message content.</param>
+        void OnRawDeviceMessage(RawDeviceMessage rawDeviceMessage);
     }
 }
+

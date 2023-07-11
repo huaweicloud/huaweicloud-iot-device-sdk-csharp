@@ -17,6 +17,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "iot-bridge-sample-tcp-proto
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "iot-bridge-sdk", "iot-bridge-sdk\iot-bridge-sdk.csproj", "{47D7C1F3-EF66-4292-A213-73A223444D0B}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "iot-bridge-sdk-test", "iot-bridge-sdk-test\iot-bridge-sdk-test.csproj", "{DF970B20-123B-45FC-927C-BBE5312B47A5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "iot-device-sdk-csharp-test", "iot-device-sdk-csharp-test\iot-device-sdk-csharp-test.csproj", "{782F53D2-3872-4198-819B-C5E808A9281D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +59,10 @@ Global
 		{DF970B20-123B-45FC-927C-BBE5312B47A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DF970B20-123B-45FC-927C-BBE5312B47A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DF970B20-123B-45FC-927C-BBE5312B47A5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{782F53D2-3872-4198-819B-C5E808A9281D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{782F53D2-3872-4198-819B-C5E808A9281D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{782F53D2-3872-4198-819B-C5E808A9281D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{782F53D2-3872-4198-819B-C5E808A9281D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
