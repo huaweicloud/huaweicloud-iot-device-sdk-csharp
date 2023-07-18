@@ -144,7 +144,7 @@ Microsoft.Extensions.Caching.Memory：v6.0.1
 
      ```c#
      openssl x509 -in deviceCert.pem -out deviceCert.crt //先生成crt格式的证书；
-     openssl pkcs12 -export -out deviceCert.pfx - inkey deviceCert.key -in deviceCert.crt - certfile rootCA.pem；
+     openssl pkcs12 -export -out deviceCert.pfx -inkey deviceCert.key -in deviceCert.crt -certfile rootCA.pem
      
      X509Certificate2 clientCert = new X509Certificate2(@"\\Test01\\deviceCert.pfx", "123456");//必须使用X509Certificate2
      ```
