@@ -138,7 +138,7 @@ We provide a smoke detector product model for your experience. The smoke detecto
 
      ```c#
      openssl x509 -in deviceCert.pem -out deviceCert.crt // Generate a certificate in CRT format.
-     openssl pkcs12 -export -out deviceCert.pfx - inkey deviceCert.key -in deviceCert.crt - certfile rootCA.pem;
+     openssl pkcs12 -export -out deviceCert.pfx -inkey deviceCert.key -in deviceCert.crt -certfile rootCA.pem
      
      X509Certificate2 clientCert = new X509Certificate2(@"\\Test01\\deviceCert.pfx", "123456");// X509Certificate2 must be used.
      ```
