@@ -6,7 +6,7 @@
 
 <!-- TOC -->
 
-- [修订记录](#0)
+- [版本更新说明](#0)
 
 - [前言](#1)
 
@@ -42,10 +42,18 @@
 
   <!-- /TOC -->
 
-<h1 id="0">修订记录</h1>
-+ 文档版本03 支持泛协议接入功能（2022-11-22）
-+ 文档版本02 增加网关和物模型功能（2020-10-25）
-+ 文档版本01 第一次正式发布（2020-08-24）
+<h1 id="0">版本更新说明</h1>
+
+
+| 版本号 | 变更类型 | 功能描述说明                                                 |
+| ------ | -------- | ------------------------------------------------------------ |
+|1.3.2| 功能增强|更新服务器ca证书|
+| 1.3.1 | 修复 | 修复空指针异常，MQTT对象未释放等问题|
+| 1.3.0  | 新功能   | 支持通过OBS升级软固件包                 |
+| 1.2.0  | 新功能 | 增加泛协议功能 |
+| 1.1.1  | 功能增强   | 添加网关删除子设备功能，完善中英文描述                                   |
+| 1.1.0  | 新功能 | 新增网关与物模型功能 |
+| 1.0.0  | 第一次发布 | 提供基础的设备接入能力，sdk预置了设备接入地址及华为物联网平台配套的CA证书 |
 
 <h1 id="1">前言</h1>
 本文通过实例讲述iot-device-sdk-cSharp（以下简称SDK）帮助设备用MQTT协议快速连接到华为物联网平台。
@@ -60,7 +68,7 @@ SDK面向运算、存储能力较强的嵌入式终端设备，开发者通过�
 
 **SDK目录结构**
 
-iot-device-sdk-csharp：sdk代码
+iot-device-sdk-java：sdk代码
 
 iot-device-demo：普通直连设备的demo代码
 
@@ -69,10 +77,6 @@ iot-gateway-demo：网关设备的demo代码
 iot-device-feature-test：调用demo程序的入口工程
 
 iot-tcp-device-test：子设备实例启动工程
-
-iot-bridge-sdk：泛协议sdk代码
-
-iot-bridge-sample-tcp-protocol：泛协议demo代码
 
 **第三方类库使用版本**
 
@@ -88,14 +92,10 @@ DotNetty.Codecs：v0.6.0
 
 DotNetty.Transport：v0.6.0
 
-DotNetty.Handlers: v0.6.0
-
-Microsoft.Extensions.Caching.Memory：v6.0.1
-
 <h1 id="3">准备工作</h1>
 *  已安装Microsoft Visual Studio 2017
 
-*  .NET Standard 版本：2.0（为支持.NET Standard 2.0 安装升级了Visual Studio：指导路径https://docs.microsoft.com/zh-cn/archive/blogs/benjaminperkins/how-to-install-net-standard-2-0）
+*  .NET Standard 版本：2.0（为支持.NET Standard 2.0 安装升级了Visual Studio：[指导路径](https://docs.microsoft.com/zh-cn/archive/blogs/benjaminperkins/how-to-install-net-standard-2-0)）
 
 <h1 id="4">上传产品模型并注册设备</h1>
 为了方便体验，我们提供了一个烟感的产品模型，烟感会上报烟雾值、温度、湿度、烟雾报警、还支持响铃报警命令。以烟感例，体验消息上报、属性上报等功能。
@@ -125,7 +125,7 @@ Microsoft.Extensions.Caching.Memory：v6.0.1
    IoTDevice device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 1883, "5eb4cd4049a5ab087d7d4861_demo", "secret");
    ```
 
-   如果使用8883端口接入，需要把平台证书（DigiCertGlobalRootCA.crt.pem）放在根目录，并写入获取的设备ID、密钥。
+   如果使用8883端口接入，需要把平台证书（DigiCertGlobalRootCA.crt.pem， [从这里下载，选择对应region并且使用pem格式证书进行替换](https://support.huaweicloud.com/devg-iothub/iot_02_1004.html#section3)）放在根目录，并写入获取的设备ID、密钥。
 
    ```c#
    IoTDevice device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 8883, "5eb4cd4049a5ab087d7d4861_demo", "secret");
@@ -144,7 +144,7 @@ Microsoft.Extensions.Caching.Memory：v6.0.1
 
      ```c#
      openssl x509 -in deviceCert.pem -out deviceCert.crt //先生成crt格式的证书；
-     openssl pkcs12 -export -out deviceCert.pfx -inkey deviceCert.key -in deviceCert.crt -certfile rootCA.pem
+     openssl pkcs12 -export -out deviceCert.pfx -inkey deviceCert.key -in deviceCert.crt -certfile rootCA.pem；
      
      X509Certificate2 clientCert = new X509Certificate2(@"\\Test01\\deviceCert.pfx", "123456");//必须使用X509Certificate2
      ```
@@ -1014,7 +1014,6 @@ SmokeDetector例子演示了如何面向物模型编程：
   7. 查看消息跟踪
 
      在平台上找到网关，选择 设备详情-消息跟踪，打开消息跟踪。继续让子设备发送数据，等待片刻后看到消息跟踪：![](./doc/doc_cn/gateway_7.png)
-
 
 <h1 id="15">泛协议开发</h1>
 
