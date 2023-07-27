@@ -45,6 +45,7 @@ English | [简体中文](README_CN.md)
 
 | Version | Change Type | Function Description                                                 |
 | ------ | -------- | ------------------------------------------------------------ |
+|1.3.2| enhance function| update server ca certificate |
 | 1.3.1 | bug fix              | fix problems such as null pointer exception, unreleased MQTT object                                                                       |
 | 1.3.0  | New Function   | Software and firmware packages can be upgraded by OBS                 |
 | 1.2.0  | New Function | Generic protocol function added |
@@ -119,7 +120,7 @@ We provide a smoke detector product model for your experience. The smoke detecto
    IoTDevice device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 1883, "5eb4cd4049a5ab087d7d4861_demo", "secret");
    ```
 
-   If you use port 8883 for device access, place the platform certificate (**DigiCertGlobalRootCA.crt.pem**) in the root directory and write into the obtained device ID and secret.
+   If you use port 8883 for device access, place the platform certificate (**DigiCertGlobalRootCA.crt.pem**,[downlaod from here, choose the corresponding region and replace it with the .pem file](https://support.huaweicloud.com/intl/en-us/devg-iothub/iot_02_1004.html#section3)) in the root directory and write into the obtained device ID and secret.
 
    ```c#
    IoTDevice device = new IoTDevice("iot-mqtts.cn-north-4.myhuaweicloud.com", 8883, "5eb4cd4049a5ab087d7d4861_demo", "secret");

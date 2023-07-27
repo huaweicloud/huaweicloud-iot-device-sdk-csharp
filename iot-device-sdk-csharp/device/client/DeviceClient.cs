@@ -49,7 +49,7 @@ namespace IoT.SDK.Device.Client
 
         private static readonly double AUTO_REPORT_DEVICE_INFO_TIME = 5;
 
-        private static readonly string SDK_VERSION = "C#_v1.3.1";
+        private static readonly string SDK_VERSION = "C#_v1.3.2";
 
         private CommandV3Listener commandV3Listener;
 
