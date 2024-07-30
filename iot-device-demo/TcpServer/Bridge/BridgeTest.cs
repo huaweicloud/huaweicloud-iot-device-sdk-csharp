@@ -32,6 +32,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security;
+using System.Threading;
 using System.Threading.Tasks;
 using IoT.SDK.Bridge.Clent;
 using IoT.SDK.Bridge.Listener;
@@ -85,19 +87,49 @@ namespace IoT.Device.Demo.HubDevice.Bridge
 
         private void StartOneTest(string name, Func<string> doAction, Func<object, bool> checkResult)
         {
+            LOG.Info(" start >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> {}", name);
             string requestId = doAction.Invoke() ?? PSEUDO_REQUEST_ID;
             StartOneTestCommon(name, requestId, checkResult, TimeSpan.FromSeconds(5));
+            LOG.Info("end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< {}", name);
         }
+        private void StartOneTest(string name, Action preSet, Func<string> doAction, Func<object, bool> checkResult, int retryTime)
+        {
+            LOG.Info(" start >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> {}", name);
+            preSet.Invoke();
 
+            for (int i = 0; i < retryTime; i++)
+            {
+                try
+                {
+                    string requestId = doAction.Invoke() ?? PSEUDO_REQUEST_ID;
+                    StartOneTestCommon(name, requestId, checkResult, TimeSpan.FromSeconds(5));
+                    break;
+                }
+                catch (VerificationException)
+                {
+                    if (i + 1 == retryTime)
+                    {
+                        throw;
+                    }
+
+                }
+                Thread.Sleep(TimeSpan.FromMilliseconds(500));
+
+            }
+            LOG.Info("end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< {}", name);
+
+        }
         private void StartOneManualTest(string name, string requestId, Func<object, bool> checkResult)
         {
-            StartOneTestCommon(name, requestId, checkResult, TimeSpan.FromMinutes(2));
+            LOG.Info(" start >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> {}", name);
+
+            StartOneTestCommon(name, requestId, checkResult, TimeSpan.FromMinutes(20));
+            LOG.Info("end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< {}", name);
         }
 
         private void StartOneTestCommon(string name, string requestId, Func<object, bool> checkResult,
             TimeSpan waitTime)
         {
-            LOG.Info(" start >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> {}", name);
             var future = new TaskCompletionSource<object>();
             requestIdCache.SetRequestId2Cache(requestId, future);
             if (!future.Task.Wait(waitTime))
@@ -107,10 +139,11 @@ namespace IoT.Device.Demo.HubDevice.Bridge
 
             if (!checkResult.Invoke(future.Task.Result))
             {
-                throw new Exception(name + " result check failed");
+
+                LOG.Warn("verify failed: {}", future.Task.Result);
+                throw new VerificationException(name + " result check failed");
             }
 
-            LOG.Info("end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< {}", name);
         }
 
         public void OnLogin(string deviceId, string requestId, int resultCode)
@@ -274,8 +307,12 @@ namespace IoT.Device.Demo.HubDevice.Bridge
                     {
                         service
                     });
+                },
+                () =>
+                {
                     return client.GetShadow(rootDeviceId, new DeviceShadowRequest
-                        { ServiceId = service.serviceId, DeviceId = rootDeviceId });
+                    { ServiceId = service.serviceId, DeviceId = rootDeviceId });
+                    // wait for shadow to refresh
                 },
                 (reply) =>
                 {
@@ -287,7 +324,7 @@ namespace IoT.Device.Demo.HubDevice.Bridge
 
 
                     return JToken.DeepEquals(reported, propertiesJ);
-                });
+                }, 10);
         }
 
         private void TestReportGatewaySubDeviceProperties()
@@ -308,6 +345,9 @@ namespace IoT.Device.Demo.HubDevice.Bridge
                     {
                         deviceProperties
                     });
+                },
+                () =>
+                {
                     return client.GetShadow(rootDeviceId,
                         new DeviceShadowRequest { ServiceId = service.serviceId, DeviceId = subDeviceId });
                 },
@@ -321,7 +361,7 @@ namespace IoT.Device.Demo.HubDevice.Bridge
 
 
                     return JToken.DeepEquals(reported, propertiesJ);
-                });
+                }, 10);
         }
 
         private void TestResetSecret()
@@ -371,13 +411,17 @@ namespace IoT.Device.Demo.HubDevice.Bridge
             StartOneTest("report event",
                 () =>
                 {
-                    client.ReportEvent(rootDeviceId, new DeviceEvent
+                    client.ReportEvent(rootDeviceId, new DeviceEvents
                     {
-                        serviceId = "$sub_device_manager",
-                        eventType = "sub_device_sync_request",
-                        paras = new Dictionary<string, object>
-                        {
-                            { "version", 0 }
+                        services = new List<DeviceEvent>{
+                            new DeviceEvent {
+                                serviceId = "$sub_device_manager",
+                                eventType = "sub_device_sync_request",
+                                paras = new Dictionary<string, object>
+                                {
+                                    { "version", 0 }
+                                }
+                            }
                         }
                     });
                     return PSEUDO_EVENT_REQUEST_ID;
