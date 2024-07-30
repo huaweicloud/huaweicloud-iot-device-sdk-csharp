@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2022-2022 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2022-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -29,43 +29,45 @@
  */
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.IO;
 
-namespace IoT.SDK.Bridge.Bootstrap {
-    public class BridgeClientConf {
-        // 平台接入地址变量名称
-        private static readonly string ENV_NET_BRIDGE_SERVER_IP = "iot-mqtts.cn-north-4.myhuaweicloud.com";
-
-        // 平台接入端口变量名称
-        private static readonly int ENV_NET_BRIDGE_SERVER_PORT = 8883;
-
+namespace IoT.SDK.Bridge.Bootstrap
+{
+    public class BridgeClientConf
+    {
         // 网桥ID环境变量名称
-        private static readonly string ENV_NET_BRIDGE_ID = "bridge1";
+        private const string ENV_NET_BRIDGE_ID = "NET_BRIDGE_ID";
 
         // 网桥密码环境变量名称
-        private static readonly string ENV_NET_BRIDGE_SECRET = "bridge1";
+        private const string ENV_NET_BRIDGE_SECRET = "NET_BRIDGE_SECRET";
 
-        // 连接IoT平台的地址 样例：xxxxxx.iot-mqtts.cn-north-4.myhuaweicloud.com
-        public string serverIp { get; set; }
+        // 平台接入地址变量名称
+        private const string ENV_NET_BRIDGE_SERVER_IP = "NET_BRIDGE_SERVER_IP";
 
-        // 连接IoT平台的端口
-        public int serverPort { get; set; }
+        // 平台接入端口变量名称
+        private const string ENV_NET_BRIDGE_SERVER_PORT = "NET_BRIDGE_SERVER_PORT";
 
         // 连接IoT平台的网桥ID.
-        public string bridgeId { get; set; }
+        public string BridgeId { get; set; }
 
         // 连接IoT平台的网桥密码
-        public string bridgeSecret { get; set; }
+        public string BridgeSecret { get; set; }
+
+        // 连接IoT平台的地址 样例：xxxxxx.iot-mqtts.cn-north-4.myhuaweicloud.com
+        public string ServerIp { get; set; }
+
+        // 连接IoT平台的端口
+        public int ServerPort { get; set; }
+
 
         public static BridgeClientConf Config()
         {
-            BridgeClientConf conf = new BridgeClientConf();
-            conf.serverIp = ENV_NET_BRIDGE_SERVER_IP;
-            conf.serverPort = ENV_NET_BRIDGE_SERVER_PORT;
-            conf.bridgeId = ENV_NET_BRIDGE_ID;
-            conf.bridgeSecret = ENV_NET_BRIDGE_SECRET;
+            var conf = new BridgeClientConf
+            {
+                ServerIp = Environment.GetEnvironmentVariable(ENV_NET_BRIDGE_SERVER_IP),
+                ServerPort = int.Parse(Environment.GetEnvironmentVariable(ENV_NET_BRIDGE_SERVER_PORT) ?? "0"),
+                BridgeId = Environment.GetEnvironmentVariable(ENV_NET_BRIDGE_ID),
+                BridgeSecret = Environment.GetEnvironmentVariable(ENV_NET_BRIDGE_SECRET)
+            };
 
             return conf;
         }

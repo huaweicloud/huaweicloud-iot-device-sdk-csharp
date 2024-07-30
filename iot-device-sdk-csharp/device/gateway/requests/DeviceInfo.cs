@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2020-2020 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2020-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -50,7 +50,7 @@ namespace IoT.SDK.Device.Gateway.Requests
         [JsonProperty("parent_device_id")]
         private string parent { get; set; }
 
-        private string name { get; set; }
+        public string name { get; set; }
 
         private string description { get; set; }
         

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2022-2022 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2022-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -28,49 +28,35 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using IoT.SDK.Device.Transport;
 using IoT.SDK.Bridge.Clent;
-using IoT.SDK.Device.Utils;
 using IoT.SDK.Device.Client.Requests;
-using NLog;
+using IoT.SDK.Device.Transport;
 
-namespace IoT.SDK.Bridge.Handler {
-    class BridgeMessageHandler : RawMessageListener {
-        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
-
-        private BridgeClient bridgeClient;
-
-        public BridgeMessageHandler(BridgeClient bridgeClient)
+namespace IoT.SDK.Bridge.Handler
+{
+    internal class BridgeMessageHandler : BridgeAbstractHandler<RawDeviceMessage>
+    {
+        protected override RawDeviceMessage ProducePayload(RawMessage message)
         {
-            this.bridgeClient = bridgeClient;
+            return new RawDeviceMessage(message.BinPayload)
+            {
+                MqttV5Data = message.MqttV5Data
+            };
         }
 
-        public void OnMessageReceived(RawMessage message)
+        protected override void OnProcessMessage(BridgeClient bridgeClient, string deviceId, string requestId,
+            RawDeviceMessage rawDeviceMessage)
         {
-            string topic = message.Topic;
-            DeviceMessage deviceMsg = new DeviceMessage();
-            deviceMsg.content = message.ToString();
-            if (!topic.Contains(BridgeClient.BRIDGE_TOPIC_KEYWORD)) {
-                Log.Error("invalid topic");
-                return;
+            bridgeClient.BridgeRawDeviceMessageListener?.OnRawDeviceMessage(deviceId, rawDeviceMessage);
+
+
+            DeviceMessage deviceMessage = rawDeviceMessage.ToDeviceMessage();
+            if (deviceMessage == null)
+            {
+                return; // isn't system format
             }
 
-            string deviceId = IotUtil.GetDeviceId(topic);
-            if (string.IsNullOrEmpty(deviceId)) {
-                return;
-            }
-
-            if (bridgeClient.bridgeDeviceMessageListener != null) {
-                bridgeClient.bridgeDeviceMessageListener.OnDeviceMessage(deviceId, deviceMsg);
-            }
-
-            return;
+            bridgeClient.bridgeDeviceMessageListener?.OnDeviceMessage(deviceId, deviceMessage);
         }
-
-        public void OnMessagePublished(RawMessage message) { return; }
-        public void OnMessageUnPublished(RawMessage message) { return; }
     }
 }

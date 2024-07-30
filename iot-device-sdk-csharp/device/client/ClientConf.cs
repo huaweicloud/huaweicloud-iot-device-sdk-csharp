@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2020-2022 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2020-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -42,6 +42,11 @@ namespace IoT.SDK.Device.Client
         public static readonly int CONNECT_OF_BRIDGE_MODE = 3;
 
         /// <summary>
+        /// enable mqtt v5, don't use this for bootstrap
+        /// </summary>
+        public bool UseMqttV5 { get; set; } = true;
+
+        /// <summary>
         /// Indicates a device ID, which is obtained when the device is registered on the platform.
         /// </summary>
         public string DeviceId { get; set; }
@@ -65,7 +70,7 @@ namespace IoT.SDK.Device.Client
         /// Device access mode, the Default value is 0.
         /// </summary>
         public int Mode { get; set; }
-		
+
         /// <summary>
         /// Indicates the QoS level. The default value is 1.
         /// </summary>
@@ -77,8 +82,25 @@ namespace IoT.SDK.Device.Client
         public X509Certificate DeviceCert { get; set; }
 
         /// <summary>
-        /// Indicates the scope ID. It is used in the self-registration scenario during device provisioning.
+        /// iot平台的ca证书存放路径，用于设备侧校验平台
+        ///  CA of IoT platform, which is used by device client to verify server. 
+        /// </summary>
+        public X509Certificate IotCaCert { get; set; }
+
+        /// <summary>
+        /// Indicates the scope ID. It is used in the group self-registration scenario during device provisioning.
         /// </summary>
         public string ScopeId { get; set; }
+
+        /// <summary>
+        /// Indicates whether check timestamp, "0" means not check, "1" means check.
+        /// </summary>
+        public string CheckTimestamp { get; set; } = "1";
+
+
+        /// <summary>
+        /// Indicates whether check timestamp, "0" means not check, "1" means check.
+        /// </summary>
+        public bool AutoReconnect { get; set; } = true;
     }
 }

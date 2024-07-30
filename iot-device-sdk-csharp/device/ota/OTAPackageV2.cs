@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2020-2020 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2020-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -28,9 +28,8 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace IoT.SDK.Device.OTA
 {
@@ -40,7 +39,27 @@ namespace IoT.SDK.Device.OTA
 
         public string version { get; set; }
 
+        [JsonProperty("file_size")]
+        public int fileSize { get; set; }
+
+        [JsonProperty("file_name")]
+        public string fileName { get; set; }
+
         public int expires { get; set; }
+
+        public string sign { get; set; }
+
+        [JsonProperty("custom_info")]
+        public string customInfo { get; set; }
+
+        [JsonProperty("task_id")]
+        public string taskId { get; set; }
+
+        [JsonProperty("sub_device_count")]
+        public int subDeviceCount { get; set; }
+
+        [JsonProperty("task_ext_info")]
+        public object taskExtInfo { get; set; }
 
         public override string ToString()
         {
@@ -48,7 +67,14 @@ namespace IoT.SDK.Device.OTA
             sb.Append("OTAPackageV2{");
             sb.Append("url='" + url + '\'');
             sb.Append(", version='" + version + '\'');
-            sb.Append(", expires=" + expires + '\'');
+            sb.Append(", fileSize=" + fileSize);
+            sb.Append(", fileName='" + fileName + '\'');
+            sb.Append(", expires=" + expires);
+            sb.Append(", sign='" + sign + '\'');
+            sb.Append(", customInfo='" + customInfo + '\'');
+            sb.Append(", taskId='" + taskId + '\'');
+            sb.Append(", subDeviceCount=" + subDeviceCount);
+            sb.Append(", taskExtInfo='" + taskExtInfo + '\'');
             sb.Append('}');
             return sb.ToString();
         }

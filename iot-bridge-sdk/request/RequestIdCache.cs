@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2022-2022 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2022-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -36,7 +36,7 @@ using System.Threading.Tasks;
 using NLog;
 
 namespace IoT.SDK.Bridge.Request {
-    public class RequestIdCache {
+    public class RequestIdCache<T> {
         private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
         private MemoryCache futureCache;
@@ -50,7 +50,7 @@ namespace IoT.SDK.Bridge.Request {
             });
         }
 
-        public void SetRequestId2Cache(string requestId, TaskCompletionSource<int> future)
+        public void SetRequestId2Cache(string requestId, TaskCompletionSource<T> future)
         {
             futureCache.Set(requestId, future, new MemoryCacheEntryOptions() {
                 SlidingExpiration = TimeSpan.FromMinutes(3),
@@ -63,10 +63,10 @@ namespace IoT.SDK.Bridge.Request {
             futureCache.Remove(key);
         }
 
-        public TaskCompletionSource<int> GetFuture(string requestId)
+        public TaskCompletionSource<T> GetFuture(string requestId)
         {
             try {
-                TaskCompletionSource<int> value = (TaskCompletionSource<int>)futureCache.Get(requestId);
+                TaskCompletionSource<T> value = (TaskCompletionSource<T>)futureCache.Get(requestId);
                 InvalidateCache(requestId);
                 return value;
             } catch (Exception e) {

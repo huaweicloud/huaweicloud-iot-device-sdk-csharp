@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2020-2020 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2020-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -48,11 +48,16 @@ namespace IoT.SDK.Device.Timesync
 
         public TimeSyncListener listener { get; set; }
 
+        public override string GetServiceId()
+        {
+            return "$time_sync";
+        }
+
         public void RequestTimeSync()
         {
             Dictionary<string, object> node = new Dictionary<string, object>();
             node.Add("device_send_time", IotUtil.GetTimeStamp());
-            
+
             DeviceEvent deviceEvent = new DeviceEvent();
             deviceEvent.eventType = "time_sync_request";
             deviceEvent.paras = node;

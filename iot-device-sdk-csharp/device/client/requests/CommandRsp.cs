@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2020-2020 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2020-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -29,6 +29,7 @@
  */
 
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 
 namespace IoT.SDK.Device.Client.Requests
@@ -50,6 +51,12 @@ namespace IoT.SDK.Device.Client.Requests
         public CommandRsp(int code, Dictionary<string, string> paras)
         {
             resultCode = code;
+            this.paras = paras.ToDictionary(v => v.Key, v => (object)v.Value);
+        }
+
+        public CommandRsp(int code, Dictionary<string, object> paras)
+        {
+            resultCode = code;
             this.paras = paras;
         }
 
@@ -68,6 +75,6 @@ namespace IoT.SDK.Device.Client.Requests
         /// <summary>
         /// Indicates command response parameters, which are defined in the product model. It is optional.
         /// </summary>
-        public Dictionary<string, string> paras { get; set; }
+        public Dictionary<string, object> paras { get; set; }
     }
 }

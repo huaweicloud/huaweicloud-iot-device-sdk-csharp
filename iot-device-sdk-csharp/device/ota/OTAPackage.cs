@@ -42,12 +42,27 @@ namespace IoT.SDK.Device.OTA
         [JsonProperty("file_size")]
         public int fileSize { get; set; }
 
+        [JsonProperty("file_name")]
+        public string fileName { get; set; }
+
         [JsonProperty("access_token")]
         public string token { get; set; }
 
         public int expires { get; set; }
 
         public string sign { get; set; }
+
+        [JsonProperty("custom_info")]
+        public string customInfo { get; set; }
+
+        [JsonProperty("task_id")]
+        public string taskId { get; set; }
+
+        [JsonProperty("sub_device_count")]
+        public int subDeviceCount { get; set; }
+
+        [JsonProperty("task_ext_info")]
+        public object taskExtInfo { get; set; }
 
         public override string ToString()
         {
@@ -56,9 +71,14 @@ namespace IoT.SDK.Device.OTA
             sb.Append("url='" + url + '\'');
             sb.Append(", version='" + version + '\'');
             sb.Append(", fileSize=" + fileSize);
+            sb.Append(", fileName='" + fileName + '\'');
             sb.Append(", token='" + token + '\'');
             sb.Append(", expires=" + expires);
             sb.Append(", sign='" + sign + '\'');
+            sb.Append(", customInfo='" + customInfo + '\'');
+            sb.Append(", taskId='" + taskId + '\'');
+            sb.Append(", subDeviceCount=" + subDeviceCount);
+            sb.Append(", taskExtInfo='" + taskExtInfo + '\'');
             sb.Append('}');
             return sb.ToString();
         }

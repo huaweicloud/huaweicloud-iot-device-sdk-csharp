@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2022-2022 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2022-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -28,54 +28,17 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using IoT.SDK.Device.Transport;
 using IoT.SDK.Bridge.Clent;
-using IoT.SDK.Device.Utils;
 using IoT.SDK.Device.Client.Requests;
-using NLog;
 
-namespace IoT.SDK.Bridge.Handler {
-    class BridgePropertySetHandler : RawMessageListener {
-        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
-
-        private BridgeClient bridgeClient;
-
-        public BridgePropertySetHandler(BridgeClient bridgeClient)
+namespace IoT.SDK.Bridge.Handler
+{
+    internal class BridgePropertySetHandler : BridgeAbstractHandler<PropsSet>
+    {
+        protected override void OnProcessMessage(BridgeClient bridgeClient, string deviceId,
+            string requestId, PropsSet message)
         {
-            this.bridgeClient = bridgeClient;
+            bridgeClient.bridgePropertyListener?.OnPropertiesSet(deviceId, requestId, message.services);
         }
-
-        public void OnMessageReceived(RawMessage message)
-        {
-            PropsSet propsSet = JsonUtil.ConvertJsonStringToObject<PropsSet>(message.ToString());
-            if (propsSet == null) {
-                Log.Error("invalid property setting");
-                return;
-            }
-            string topic = message.Topic;
-            if (!topic.Contains(BridgeClient.BRIDGE_TOPIC_KEYWORD)) {
-                Log.Error("invalid topic");
-                return;
-            }
-
-            string deviceId = IotUtil.GetDeviceId(topic);
-            string requestId = IotUtil.GetRequestId(topic);
-            if (string.IsNullOrEmpty(deviceId) || string.IsNullOrEmpty(requestId)) {
-                Log.Error("invalid para");
-                return;
-            }
-
-            if (bridgeClient.bridgePropertyListener != null) {
-                bridgeClient.bridgePropertyListener.OnPropertiesSet(deviceId, requestId, propsSet.services);
-            }
-
-            return;
-        }
-
-        public void OnMessagePublished(RawMessage message) { return; }
-        public void OnMessageUnPublished(RawMessage message) { return; }
     }
 }

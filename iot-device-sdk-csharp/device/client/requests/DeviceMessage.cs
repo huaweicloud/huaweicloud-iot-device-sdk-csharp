@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2020-2020 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2020-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -28,6 +28,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using IoT.SDK.Device.Transport;
 using Newtonsoft.Json;
 
 namespace IoT.SDK.Device.Client.Requests
@@ -48,9 +49,10 @@ namespace IoT.SDK.Device.Client.Requests
         /// Constructor used to create a DeviceMessage object.
         /// </summary>
         /// <param name="message">Indicates the message content.</param>
-        public DeviceMessage(string message)
+        public DeviceMessage(string message, MqttV5Data mqttV5Data = null)
         {
             content = message;
+            this.MqttV5Data = mqttV5Data;
         }
 
         /// <summary>
@@ -73,5 +75,8 @@ namespace IoT.SDK.Device.Client.Requests
         /// Indicates a message ID. It is optional.
         /// </summary>
         public string id { get; set; }
+        
+        [JsonIgnore]
+        public MqttV5Data MqttV5Data { get; set; }
     }
 }

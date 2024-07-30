@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2022-2022 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2022-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -36,18 +36,22 @@ using IoT.SDK.Device.Config;
 using IoT.SDK.Device.Transport;
 using IoT.SDK.Device.Transport.Mqtt;
 using MQTTnet;
+using Newtonsoft.Json.Linq;
 using NLog;
 
 namespace IoT.SDK.Device.Bootstrap
 {
     public class BootstrapClient : RawMessageListener, ConnectListener
     {
-        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+        private static readonly Logger LOG = LogManager.GetCurrentClassLogger();
 
-        private string deviceId;
+        private readonly Connection connection;
 
-        private Connection connection;
-        
+        private readonly ClientConf clientConf = new ClientConf
+        {
+            UseMqttV5 = false
+        };
+
         /// <summary>
         /// Constructor used to create an BootstrapClient object. In this method, secret authentication is used.
         /// </summary>
@@ -55,16 +59,17 @@ namespace IoT.SDK.Device.Bootstrap
         /// <param name="port">Indicates the port for device access.</param>
         /// <param name="deviceId">Indicates a device ID.</param>
         /// <param name="deviceSecret">Indicates a secret.</param>
-        public BootstrapClient(string bootstrapUri, int port, string deviceId, string deviceSecret)
+        /// <param name="scopeId">Indicate if using group registration</param>
+        public BootstrapClient(string bootstrapUri, int port, string deviceId, string deviceSecret,
+            string scopeId = null)
         {
-            ClientConf clientConf = new ClientConf();
             clientConf.ServerUri = bootstrapUri;
             clientConf.Port = port;
             clientConf.DeviceId = deviceId;
             clientConf.Secret = deviceSecret;
-            this.deviceId = deviceId;
-            this.connection = new MqttConnection(clientConf, this, this);
-            Log.Info("create BootstrapClient: " + clientConf.DeviceId);
+            clientConf.ScopeId = scopeId;
+            connection = new MqttConnection(clientConf, this, this);
+            LOG.Info("create BootstrapClient, device id:{}", clientConf.DeviceId);
         }
 
         /// <summary>
@@ -74,37 +79,17 @@ namespace IoT.SDK.Device.Bootstrap
         /// <param name="port">Indicates the port for device access.</param>
         /// <param name="deviceId">Indicates a device ID.</param>
         /// <param name="deviceCert">Indicates the device certificate</param>
-        public BootstrapClient(string bootstrapUri, int port, string deviceId, X509Certificate2 deviceCert)
+        /// <param name="scopeId">Indicate if using group registration</param>
+        public BootstrapClient(string bootstrapUri, int port, string deviceId, X509Certificate2 deviceCert,
+            string scopeId = null)
         {
-            ClientConf clientConf = new ClientConf();
             clientConf.ServerUri = bootstrapUri;
             clientConf.Port = port;
             clientConf.DeviceId = deviceId;
             clientConf.DeviceCert = deviceCert;
-            this.deviceId = deviceId;
-            this.connection = new MqttConnection(clientConf, this, this);
-            Log.Info("create BootstrapClient: " + clientConf.DeviceId);
-        }
-
-        /// <summary>
-        /// 构造函数，自注册场景下证书创建
-        /// </summary>
-        /// <param name="bootstrapUri">bootstrap server地址，比如ssl://iot-bs.cn-north-4.myhuaweicloud.com:8883</param>
-        /// <param name="port">Indicates the port for device access.</param>
-        /// <param name="deviceId">Indicates a device ID.</param>
-        /// <param name="deviceCert">Indicates the device certificate</param>
-        /// <param name="scopeId"></param>
-        public BootstrapClient(string bootstrapUri, int port, string deviceId, X509Certificate2 deviceCert, string scopeId)
-        {
-            ClientConf clientConf = new ClientConf();
-            clientConf.ServerUri = bootstrapUri;
-            clientConf.Port = port;
-            clientConf.DeviceId = deviceId;
             clientConf.ScopeId = scopeId;
-            clientConf.DeviceCert = deviceCert;
-            this.deviceId = deviceId;
             this.connection = new MqttConnection(clientConf, this, this);
-            Log.Info("create BootstrapClient: " + clientConf.DeviceId);
+            LOG.Info("create BootstrapClient, device id:{}", clientConf.DeviceId);
         }
 
         public BootstrapMessageListener bootstrapMessageListener { get; set; }
@@ -137,21 +122,34 @@ namespace IoT.SDK.Device.Bootstrap
         {
         }
 
-        public void Bootstrap()
+        /// <summary>
+        /// start the provision process
+        /// </summary>
+        /// <param name="keywordInMessage">when using "Reported Data" as Keyword source in static strategy， fill this parameter with text containing corresponding keyword</param>
+        public void Bootstrap(string keywordInMessage = null)
         {
             if (connection.Connect() != 0)
             {
-                Log.Error("connect failed.");
-
+                LOG.Error("connect failed.");
                 return;
             }
-            
-            List<MqttTopicFilter> listTopic = new List<MqttTopicFilter>();
-            var topicFilterBulderPreTopic = new MqttTopicFilterBuilder().WithTopic(string.Format(CommonTopic.TOPIC_SYS_BOOTSTRAP_DOWN, this.deviceId)).Build();
-            listTopic.Add(topicFilterBulderPreTopic);
+
+            var content = string.Empty;
+            if (keywordInMessage != null)
+            {
+                content = new JObject { { "baseStrategyKeyword", keywordInMessage } }.ToString();
+            }
+
+
+            var listTopic = new List<MqttTopicFilter>();
+            var topicFilterBuilderPreTopic = new MqttTopicFilterBuilder()
+                .WithTopic(string.Format(CommonTopic.TOPIC_SYS_BOOTSTRAP_DOWN, clientConf.DeviceId)).Build();
+            listTopic.Add(topicFilterBuilderPreTopic);
             connection.SubscribeTopic(listTopic);
-            
-            connection.PublishMessage(new RawMessage(string.Format(CommonTopic.TOPIC_SYS_BOOTSTRAP_UP, this.deviceId), string.Empty));
+
+            connection.PublishMessage(new RawMessage(
+                string.Format(CommonTopic.TOPIC_SYS_BOOTSTRAP_UP, clientConf.DeviceId),
+                content));
         }
 
         /// <summary>

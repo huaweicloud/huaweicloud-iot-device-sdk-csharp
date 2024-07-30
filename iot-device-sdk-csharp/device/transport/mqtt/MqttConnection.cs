@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2020-2022 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2020-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -30,73 +30,70 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using IoT.SDK.Device.Client;
 using IoT.SDK.Device.Config;
-using IoT.SDK.Device.Log;
 using IoT.SDK.Device.Log.Requests;
 using IoT.SDK.Device.Utils;
 using MQTTnet;
 using MQTTnet.Client.Connecting;
 using MQTTnet.Client.Disconnecting;
-using MQTTnet.Client.Options;
 using MQTTnet.Client.Receiving;
 using MQTTnet.Extensions.ManagedClient;
-using MQTTnet.Formatter;
 using NLog;
 
 namespace IoT.SDK.Device.Transport.Mqtt
 {
     internal class MqttConnection : Connection
     {
-        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+        private static readonly Logger LOG = LogManager.GetCurrentClassLogger();
 
-        private static readonly ushort DEFAULT_KEEPLIVE = 120;
+        private ManualResetEvent mre = new ManualResetEvent(false);
+        private IManagedMqttClient client = null;
 
-        private static readonly double RECONNECT_TIME = 10;
 
-        private static readonly double DEFAULT_CONNECT_TIMEOUT = 1;
-        
-        private static readonly string ConnectType = "0";
+        private readonly ClientConf clientConf;
 
-        private static readonly string CheckTimestamp = "0";
+        private HashSet<ConnectListener> ConnectListener { get; } = new HashSet<ConnectListener>();
 
-        private static ManualResetEvent mre = new ManualResetEvent(false);
+        private readonly RawMessageListener rawMessageListener;
 
-        private static IManagedMqttClient client = null;
 
-        private static int retryTimes = 0;
-
-        private bool lessThanMaxBackoffTimeFlag = false;
-
-        private long minBackoff = 1000;
-
-        private long maxBackoff = 4 * 60 * 1000; // 4 minutes
-
-        private long defaultBackoff = 1000;
-
-        private Mutex mutex = new Mutex(false);
-
-        private ClientConf clientConf;
-
-        private ConnectListener connectListener;
-
-        private RawMessageListener rawMessageListener;
-        
-        private Random random = new Random();
-
-        public readonly int MQTTS_PORT = 8883;
-
-        public readonly int MQTT_PORT = 1883;
-
-        public MqttConnection(ClientConf clientConf, RawMessageListener rawMessageListener, ConnectListener connectListener)
+        public MqttConnection(ClientConf clientConf, RawMessageListener rawMessageListener,
+            ConnectListener connectListener)
         {
             this.clientConf = clientConf;
             this.rawMessageListener = rawMessageListener;
-            this.connectListener = connectListener;
+            this.ConnectListener.Add(connectListener);
+        }
+
+        private void InitMqttClient()
+        {
+            if (clientConf.AutoReconnect)
+            {
+                client = new CustomReconnectDelayMqttFactoryProxy(
+                    new MqttFactory(), this, new IoTMqttOptionsGetter(clientConf)).CreateManagedMqttClient();
+            }
+            else
+            {
+                client = new MqttFactory().CreateManagedMqttClient();
+            }
+
+            // Registers events.
+            // Callback for message publish.
+            client.ApplicationMessageProcessedHandler =
+                new ApplicationMessageProcessedHandlerDelegate(ApplicationMessageProcessedHandlerMethod);
+            // Callback for command delivered.
+            client.ApplicationMessageReceivedHandler =
+                new MqttApplicationMessageReceivedHandlerDelegate(MqttApplicationMessageReceived);
+            client.ConnectedHandler =
+                new MqttClientConnectedHandlerDelegate(OnMqttClientConnected);
+            // Callback for disconnected.
+            client.DisconnectedHandler =
+                new MqttClientDisconnectedHandlerDelegate(OnMqttClientDisconnected);
+            client.ConnectingFailedHandler =
+                new ConnectingFailedHandlerDelegate(OnMqttClientConnectingFailed);
         }
 
         /// <summary>
@@ -107,26 +104,12 @@ namespace IoT.SDK.Device.Transport.Mqtt
         {
             try
             {
-                client = new MqttFactory().CreateManagedMqttClient();
-                
-                // Registers events.
-                client.ApplicationMessageProcessedHandler = new ApplicationMessageProcessedHandlerDelegate(new Action<ApplicationMessageProcessedEventArgs>(ApplicationMessageProcessedHandlerMethod)); // Callback for message publish.
-
-                client.ApplicationMessageReceivedHandler = new MqttApplicationMessageReceivedHandlerDelegate(new Action<MqttApplicationMessageReceivedEventArgs>(MqttApplicationMessageReceived)); // Callback for command delivered.
-
-                client.ConnectedHandler = new MqttClientConnectedHandlerDelegate(new Action<MqttClientConnectedEventArgs>(OnMqttClientConnected));
-
-                client.DisconnectedHandler = new MqttClientDisconnectedHandlerDelegate(new Action<MqttClientDisconnectedEventArgs>(OnMqttClientDisconnected)); // Callback for disconnected.
-
-                client.ConnectingFailedHandler = new ConnectingFailedHandlerDelegate(new Action<ManagedProcessFailedEventArgs>(OnMqttClientConnectingFailed));
-
-                Log.Info("try to connect to server " + clientConf.ServerUri);
-
-                IManagedMqttClientOptions options = GetOptions();
+                InitMqttClient();
+                LOG.Info("try to connect to server {:l}:{}", clientConf.ServerUri, clientConf.Port);
+                IManagedMqttClientOptions options = new IoTMqttOptionsGetter(clientConf).GetManagedOptions();
 
                 // Connects to the platform.
                 client.StartAsync(options);
-
                 mre.Reset();
 
                 mre.WaitOne();
@@ -135,8 +118,7 @@ namespace IoT.SDK.Device.Transport.Mqtt
             }
             catch (Exception ex)
             {
-                Log.Error("SDK.Error: Connect to mqtt server fail, the deviceid is " + clientConf.DeviceId);
-
+                LOG.Error(ex, "SDK.Error: Connect to mqtt server fail, device id:{}", clientConf.DeviceId);
                 return -1;
             }
         }
@@ -144,41 +126,45 @@ namespace IoT.SDK.Device.Transport.Mqtt
         public void PublishMessage(RawMessage message)
         {
             string topic = message.Topic;
-
-            Log.Debug("publish message topic = " + topic);
+            LOG.Debug("publish message topic = {}", topic);
 
             if (string.IsNullOrEmpty(topic))
             {
-                Log.Error("publish message is null");
-
-                return;
+                LOG.Error("publish message is null");
             }
-            
+
             var appMsg = new MqttApplicationMessage();
-            appMsg.Payload = Encoding.UTF8.GetBytes(message.Payload);
+            appMsg.Payload = message.BinPayload;
             appMsg.Topic = topic;
             appMsg.QualityOfServiceLevel = clientConf.Qos;
             appMsg.Retain = false;
+            if (message.MqttV5Data != null)
+            {
+                appMsg.CorrelationData = message.MqttV5Data?.CorrelationData;
+                appMsg.UserProperties = message.MqttV5Data?.UserProperties;
+                appMsg.ContentType = message.MqttV5Data?.ContentType;
+                appMsg.ResponseTopic = message.MqttV5Data?.ResponseTopic;
+            }
 
             // Responds to the upstream message.
-            client.PublishAsync(appMsg).Wait();
+            var task = client.PublishAsync(appMsg);
+            task.Wait();
+            var result = task.Result;
 
-            Log.Debug($"publish msg : publishing message is " + message.Payload);
+            LOG.Debug("publish msg content:{}, reason code:{}, package indentifier:{}",
+                message.Payload, result.ReasonCode, result.PacketIdentifier);
         }
 
         public void Close()
         {
-            if (client.IsConnected)
+            try
             {
-                try
-                {
-                    // client.StopAsync().Wait();
-                    client.Dispose();
-                }
-                catch (Exception ex)
-                {
-                    Log.Error("SDK.Error: Close connection error, deviceid is " + clientConf.DeviceId);
-                }
+                // client.StopAsync().Wait();
+                client.Dispose();
+            }
+            catch (Exception ex)
+            {
+                LOG.Error(ex, "SDK.Error: Close connection error, device id:{}", clientConf.DeviceId);
             }
         }
 
@@ -192,9 +178,9 @@ namespace IoT.SDK.Device.Transport.Mqtt
             return client.IsConnected;
         }
 
-        public void SetConnectListener(ConnectListener connectListener)
+        public void AddConnectListener(ConnectListener listener)
         {
-            this.connectListener = connectListener;
+            this.ConnectListener.Add(listener);
         }
 
         public void SubscribeTopic(List<MqttTopicFilter> listTopic)
@@ -203,29 +189,30 @@ namespace IoT.SDK.Device.Transport.Mqtt
             {
                 if (!client.IsConnected)
                 {
-                    Log.Debug("The MQTT client is not connected.");
+                    LOG.Debug("The MQTT client is not connected.");
                     return;
                 }
-                
+
                 if (listTopic.Count <= 0)
                 {
-                    Log.Debug("The topic cannot be left blank.");
+                    LOG.Debug("The topic list cannot be empty.");
                     return;
                 }
 
                 // Subscribes to a topic.
                 client.SubscribeAsync(listTopic.ToArray()).Wait();
-
+                LOG.Debug("succeed to subscribe topics");
                 foreach (MqttTopicFilter mqttTopicFilter in listTopic)
                 {
-                    Log.Debug($"topic : [{mqttTopicFilter.Topic}] is subscribed success");
+                    LOG.Debug("succeed topic: {}", mqttTopicFilter.Topic);
                 }
             }
             catch (Exception ex)
             {
-                foreach (MqttTopicFilter mqttTopicFilter in listTopic)
+                LOG.Error(ex, "topic subscribe failed");
+                foreach (var mqttTopicFilter in listTopic)
                 {
-                    Log.Debug($"topic : [{mqttTopicFilter.Topic}] is subscribed fail");
+                    LOG.Debug("failed topic: {}", mqttTopicFilter.Topic);
                 }
             }
         }
@@ -242,33 +229,39 @@ namespace IoT.SDK.Device.Transport.Mqtt
                 payload = Encoding.UTF8.GetString(e.ApplicationMessage.Payload);
             }
 
-            Log.Info($"messageArrived topic = {e.ApplicationMessage.Topic}, msg = {payload}");
+            LOG.Info("messageArrived, topic: {}, msg: {}", e.ApplicationMessage.Topic, payload);
             RawMessage rawMessage = new RawMessage(e.ApplicationMessage.Topic, payload);
+            if (e.ApplicationMessage.UserProperties != null || e.ApplicationMessage.ContentType != null
+                                                            || e.ApplicationMessage.ResponseTopic != null
+                                                            || e.ApplicationMessage.CorrelationData != null)
+            {
+                rawMessage.MqttV5Data = new MqttV5Data
+                {
+                    UserProperties = e.ApplicationMessage.UserProperties,
+                    ContentType = e.ApplicationMessage.ContentType,
+                    ResponseTopic = e.ApplicationMessage.ResponseTopic,
+                    CorrelationData = e.ApplicationMessage.CorrelationData,
+                };
+            }
+
             try
             {
-                if (rawMessageListener != null)
-                {
-                    rawMessageListener.OnMessageReceived(rawMessage);
-                }
+                rawMessageListener?.OnMessageReceived(rawMessage);
             }
             catch (Exception ex)
             {
-                Log.Error($"SDK.Error: Message received error, the message is {payload}");
+                LOG.Error(ex, "SDK.Error: Message received error, message:{}", payload);
             }
         }
 
         private void OnMqttClientConnected(MqttClientConnectedEventArgs e)
         {
-            retryTimes = 0;
-
-            Log.Info("connect success, deviceid is " + clientConf.DeviceId);
-            if (connectListener != null)
+            LOG.Info("connect success, device id:{}", clientConf.DeviceId);
+            foreach (var connectListener in ConnectListener)
             {
                 connectListener.ConnectComplete();
             }
 
-            SaveLog(LogService.MQTT_CONNECTION_SUCCESS, "connect success");
-            
             mre.Set();
         }
 
@@ -276,88 +269,23 @@ namespace IoT.SDK.Device.Transport.Mqtt
         {
             try
             {
-                if (retryTimes == 0)
-                {
-                    lessThanMaxBackoffTimeFlag = true;
-                }
+                LOG.Error(e.Exception, "SDK.Error: Connect fail, device id:{}", clientConf.DeviceId);
 
-                Log.Error("SDK.Error: Connect fail, deviceid is " + clientConf.DeviceId);
-                if (connectListener != null)
+                foreach (var connectListener in ConnectListener)
                 {
                     connectListener.ConnectFail();
                 }
 
-                long waitTimeUtilNextRetry = 0;
-
                 // If the password is wrong, do not reconnect.
                 if (e.Exception.Message.Contains("BadUserNameOrPassword"))
                 {
-                    Log.Info("bad user name or password");
-                    return;
+                    LOG.Info("bad user name or password");
                 }
-
-                // Backoff reconnection
-                Log.Info("reconnect is starting");
-                if (lessThanMaxBackoffTimeFlag)
-                {
-                    if (retryTimes > 0)
-                    {
-                        int lowBound = (int)(defaultBackoff * 0.8);
-                        int highBound = (int)(defaultBackoff * 1.2);
-                        long randomBackOff = random.Next(highBound - lowBound);
-                        long backOffWithJitter = (int)Math.Pow(2.0, retryTimes - 1) * (randomBackOff + lowBound);
-                        waitTimeUtilNextRetry = minBackoff + backOffWithJitter;
-                    }
-
-                    if (waitTimeUtilNextRetry < maxBackoff)
-                    {
-                        retryTimes++;
-                    }
-                    else
-                    {
-                        waitTimeUtilNextRetry = maxBackoff;
-                        lessThanMaxBackoffTimeFlag = false;
-                    }
-                }
-                else
-                {
-                    waitTimeUtilNextRetry = maxBackoff;
-                }
-
-                Log.Info("connect after time: " + waitTimeUtilNextRetry);
-
-                client.StopAsync();
-                client = new MqttFactory().CreateManagedMqttClient();
-
-                IManagedMqttClientOptions options = GetOptions();
-
-                // Registers events.
-                client.ApplicationMessageProcessedHandler = new ApplicationMessageProcessedHandlerDelegate(
-                    new Action<ApplicationMessageProcessedEventArgs>(
-                        ApplicationMessageProcessedHandlerMethod)); // Callback for message publish.
-
-                client.ApplicationMessageReceivedHandler =
-                    new MqttApplicationMessageReceivedHandlerDelegate(
-                        new Action<MqttApplicationMessageReceivedEventArgs>(
-                            MqttApplicationMessageReceived)); // Callback for command delivered.
-
-                client.ConnectedHandler =
-                    new MqttClientConnectedHandlerDelegate(
-                        new Action<MqttClientConnectedEventArgs>(OnMqttClientConnected));
-
-                client.ConnectingFailedHandler =
-                    new ConnectingFailedHandlerDelegate(
-                        new Action<ManagedProcessFailedEventArgs>(OnMqttClientConnectingFailed));
-
-                Thread.Sleep((int)waitTimeUtilNextRetry);
-                client.StartAsync(options);
             }
             catch (Exception ex)
             {
-                Log.Error("SDK.Error: Connect fail, deviceid is " + clientConf.DeviceId);
+                LOG.Error(ex, "SDK.Error: ConnectFail callback fail, device id:{}", clientConf.DeviceId);
             }
-
-            SaveLog(LogService.MQTT_CONNECTION_FAILURE, e.Exception.Message);
         }
 
         /// <summary>
@@ -366,13 +294,11 @@ namespace IoT.SDK.Device.Transport.Mqtt
         /// <param name="e"></param>
         private void OnMqttClientDisconnected(MqttClientDisconnectedEventArgs e)
         {
-            Log.Error("Connect lost, deviceid is " + clientConf.DeviceId);
-            if (connectListener != null)
+            LOG.Error(e.Exception, "Connect lost, device id:{}", clientConf.DeviceId);
+            foreach (var connectListener in ConnectListener)
             {
                 connectListener.ConnectionLost();
             }
-            
-            SaveLog(LogService.MQTT_CONNECTION_LOST, e.Exception?.Message);
         }
 
         /// <summary>
@@ -385,29 +311,34 @@ namespace IoT.SDK.Device.Transport.Mqtt
             {
                 if (rawMessageListener == null)
                 {
-                    Log.Error($"rawMessageListener is null");
-
+                    LOG.Error("rawMessageListener is null");
                     return;
                 }
 
-                RawMessage rawMessage = new RawMessage(e.ApplicationMessage.Id.ToString(), e.ApplicationMessage.ApplicationMessage.Topic, Encoding.UTF8.GetString(e.ApplicationMessage.ApplicationMessage.Payload));
+                var stringPayload = Encoding.UTF8.GetString(e.ApplicationMessage.ApplicationMessage.Payload);
+                var messageId = e.ApplicationMessage.Id.ToString();
+                var topic = e.ApplicationMessage.ApplicationMessage.Topic;
+                RawMessage rawMessage = new RawMessage(messageId, topic, stringPayload);
 
                 if (e.HasFailed)
                 {
-                    Log.Info($"messageId " + e.ApplicationMessage.Id + ", topic: " + e.ApplicationMessage.ApplicationMessage.Topic + ", payload: " + Encoding.UTF8.GetString(e.ApplicationMessage.ApplicationMessage.Payload) + " is published fail");
+                    LOG.Info("publish failed, messageId: {0}, topic: {1}, payload: {2}",
+                        messageId, topic, stringPayload);
 
                     rawMessageListener.OnMessageUnPublished(rawMessage);
                 }
                 else if (e.HasSucceeded)
                 {
-                    Log.Info($"messageId " + e.ApplicationMessage.Id + ", topic: " + e.ApplicationMessage.ApplicationMessage.Topic + ", payload: " + Encoding.UTF8.GetString(e.ApplicationMessage.ApplicationMessage.Payload) + " is published success");
-                    
+                    LOG.Debug("publish succeed messageId: {0}, topic: {1}, payload: {2}",
+                        messageId, topic, stringPayload);
+
                     rawMessageListener.OnMessagePublished(rawMessage);
                 }
             }
             catch (Exception ex)
             {
-                Log.Error("SDK.Error: the message is " + Encoding.UTF8.GetString(e.ApplicationMessage.ApplicationMessage.Payload));
+                LOG.Error(ex, "SDK.Error: message being published:{0} ",
+                    Encoding.UTF8.GetString(e.ApplicationMessage.ApplicationMessage.Payload));
             }
         }
 
@@ -420,7 +351,8 @@ namespace IoT.SDK.Device.Transport.Mqtt
         {
             try
             {
-                Dictionary<string, LogInfo> logDic = JsonUtil.ConvertJsonStringToDic<string, LogInfo>(IotUtil.ReadJsonFile(CommonFilePath.LOG_PATH));
+                Dictionary<string, LogInfo> logDic =
+                    JsonUtil.ConvertJsonStringToDic<string, LogInfo>(IotUtil.ReadJsonFile(CommonFilePath.LOG_PATH));
 
                 if (logDic.ContainsKey(logType))
                 {
@@ -439,106 +371,8 @@ namespace IoT.SDK.Device.Transport.Mqtt
             }
             catch (Exception ex)
             {
-                Log.Error("SDK.Error: SaveLog error");
+                LOG.Error(ex, "SDK.Error: SaveLog failed");
             }
-        }
-
-        /// <summary>
-        /// Get mqtt client options
-        /// </summary>
-        /// <returns></returns>
-        private IManagedMqttClientOptions GetOptions()
-        {
-            IManagedMqttClientOptions options = null;
-
-            string caCertPath = @"\certificate\DigiCertGlobalRootCA.crt.pem";
-
-            string timestamp = DateTime.Now.ToString("yyyyMMddHH");
-            string clientId = string.Empty;
-
-            if (clientConf.ScopeId == null)
-            {
-                clientId = clientConf.DeviceId + "_" + clientConf.Mode + "_" + CheckTimestamp + "_" + timestamp;
-            }
-            else
-            {
-                clientId = clientConf.DeviceId + "_" + ConnectType + "_" + clientConf.ScopeId;
-            }
-
-            // Encrypts the secret using HMAC-SHA256.
-            string secret = string.Empty;
-            if (!string.IsNullOrEmpty(clientConf.Secret))
-            {
-                secret = EncryptUtil.HmacSHA256(clientConf.Secret, timestamp);
-            }
-
-            // Checks whether the connection is secure.
-            if (clientConf.Port == MQTT_PORT)
-            {
-                options = new ManagedMqttClientOptionsBuilder()
-                .WithAutoReconnectDelay(TimeSpan.FromDays(RECONNECT_TIME))
-                .WithClientOptions(new MqttClientOptionsBuilder()
-                    .WithTcpServer(clientConf.ServerUri, clientConf.Port)
-                    .WithCommunicationTimeout(TimeSpan.FromSeconds(DEFAULT_CONNECT_TIMEOUT))
-                    .WithCredentials(clientConf.DeviceId, secret)
-                    .WithClientId(clientId)
-                    .WithKeepAlivePeriod(TimeSpan.FromSeconds(DEFAULT_KEEPLIVE))
-                    .WithCleanSession(false)
-                    .WithProtocolVersion(MqttProtocolVersion.V311)
-                    .Build())
-                .Build();
-            }
-            else if ((clientConf.Port == MQTTS_PORT) && clientConf.DeviceCert == null)
-            {
-                options = new ManagedMqttClientOptionsBuilder()
-                .WithAutoReconnectDelay(TimeSpan.FromDays(RECONNECT_TIME))
-                .WithClientOptions(new MqttClientOptionsBuilder()
-                    .WithTcpServer(clientConf.ServerUri, clientConf.Port)
-                    .WithCommunicationTimeout(TimeSpan.FromSeconds(DEFAULT_CONNECT_TIMEOUT))
-                    .WithCredentials(clientConf.DeviceId, secret)
-                    .WithClientId(clientId)
-                    .WithKeepAlivePeriod(TimeSpan.FromSeconds(DEFAULT_KEEPLIVE))
-                    .WithCleanSession(false)
-                    .WithTls(new MqttClientOptionsBuilderTlsParameters()
-                    {
-                        AllowUntrustedCertificates = true,
-                        UseTls = true,
-                        Certificates = new List<X509Certificate> { IotUtil.GetCert(caCertPath) },
-                        CertificateValidationHandler = delegate { return true; },
-                        IgnoreCertificateChainErrors = false,
-                        IgnoreCertificateRevocationErrors = false
-                    })
-                    .WithProtocolVersion(MqttProtocolVersion.V311)
-                    .Build())
-                .Build();
-            }
-            else
-            {
-                // Uses a certificate to connect to the platform.
-                options = new ManagedMqttClientOptionsBuilder()
-                .WithAutoReconnectDelay(TimeSpan.FromDays(RECONNECT_TIME))
-                .WithClientOptions(new MqttClientOptionsBuilder()
-                    .WithTcpServer(clientConf.ServerUri, clientConf.Port)
-                    .WithCommunicationTimeout(TimeSpan.FromSeconds(DEFAULT_CONNECT_TIMEOUT))
-                    .WithCredentials(clientConf.DeviceId, string.Empty)
-                    .WithClientId(clientId)
-                    .WithKeepAlivePeriod(TimeSpan.FromSeconds(DEFAULT_KEEPLIVE))
-                    .WithCleanSession(false)
-                    .WithTls(new MqttClientOptionsBuilderTlsParameters()
-                    {
-                        AllowUntrustedCertificates = true,
-                        UseTls = true,
-                        Certificates = new List<X509Certificate> { IotUtil.GetCert(caCertPath), clientConf.DeviceCert },
-                        CertificateValidationHandler = delegate { return true; },
-                        IgnoreCertificateChainErrors = false,
-                        IgnoreCertificateRevocationErrors = false
-                    })
-                    .WithProtocolVersion(MqttProtocolVersion.V311)
-                    .Build())
-                .Build();
-            }
-
-            return options;
         }
     }
 }

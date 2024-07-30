@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2022-2022 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2022-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -28,12 +28,10 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace IoT.SDK.Bridge.Listener {
-    public interface LoginListener {
+namespace IoT.SDK.Bridge.Listener
+{
+    public interface LoginListener
+    {
         /// <summary>
         /// 网桥下设备登录监听器
         /// </summary>

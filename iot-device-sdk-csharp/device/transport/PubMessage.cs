@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2020-2020 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2020-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -29,6 +29,7 @@
  */
 
 using System.Collections.Generic;
+using System.Text;
 using IoT.SDK.Device.Client.Requests;
 using IoT.SDK.Device.Config;
 using IoT.SDK.Device.Utils;
@@ -56,9 +57,21 @@ namespace IoT.SDK.Device.Transport
         public PubMessage(string topic, DeviceProperties deviceProperties)
         {
             this.Topic = topic;
-            this.Message = "{\"services\":" + JsonUtil.ConvertObjectToJsonString(deviceProperties) + "}";
+            this.Message = JsonUtil.ConvertObjectToJsonString(deviceProperties);
         }
 
+        /// <summary>
+        /// Publishes a raw message. The differences between raw messages and device messages are as follows:
+        /// 1. A topic can be customized. The topic must be configured on the platform.
+        /// 2. The payload format is not limited.
+        /// </summary>
+        /// <param name="topic">Indicate the topic to which message is reported</param>
+        /// <param name="payload">Indicate the payload to be reported</param>
+        public PubMessage(string topic, byte[] payload)
+        {
+            this.Topic = topic;
+            this.Payload = payload;
+        }
         /// <summary>
         /// Publishes a raw message. The differences between raw messages and device messages are as follows:
         /// 1. A topic can be customized. The topic must be configured on the platform.
@@ -71,7 +84,6 @@ namespace IoT.SDK.Device.Transport
             this.Topic = topic;
             this.Message = message;
         }
-
         /// <summary>
         /// Reports a device message.
         /// To report a message for a child device, call the setDeviceId API of DeviceMessage to set the device ID of the child device.
@@ -102,6 +114,15 @@ namespace IoT.SDK.Device.Transport
 
         public string Topic { get; set; }
 
-        public string Message { get; set; }
+        public string Message
+        {
+            get => Encoding.UTF8.GetString(Payload);
+            set => Payload = Encoding.UTF8.GetBytes(value);
+        }
+        
+        // 非用户API, 仅内部使用
+        public byte[] Payload { get; set; }
+
+        public MqttV5Data MqttV5Data { get; set; }
     }
 }

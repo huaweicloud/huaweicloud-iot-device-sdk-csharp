@@ -34,12 +34,12 @@ namespace IoT.SDK.Device.Timesync
     {
         /// <summary>
         /// Called when a time synchronization response is received.
-        /// If the time recorded by the device is device_recv_time, then the time recorded by the platform (the accurate time when the device receives the platform's response) is calculated using the following formula:
-        /// (server_recv_time + server_send_time + device_recv_time - device_send_time) / 2
+        /// If the time recorded by the device is deviceReceiveTime, then the time recorded by the platform (the accurate time when the device receives the platform's response) is calculated using the following formula:
+        /// (serverReceiveTime + serverSendTime + deviceReceiveTime - deviceSendTimeTime) / 2
         /// </summary>
-        /// <param name="device_send_time">Indicates the time when the device sends a time synchronization request.</param>
-        /// <param name="server_recv_time">Indicates the time when the platform receives the time synchronization request.</param>
-        /// <param name="server_send_time">Indicates the time when the platform sends a time synchronization response.</param>
-        void OnTimeSyncResponse(long device_send_time, long server_recv_time, long server_send_time);
+        /// <param name="deviceSendTimeTime">Indicates the time when the device sends a time synchronization request.</param>
+        /// <param name="serverReceiveTime">Indicates the time when the platform receives the time synchronization request.</param>
+        /// <param name="serverSendTime">Indicates the time when the platform sends a time synchronization response.</param>
+        void OnTimeSyncResponse(long deviceSendTimeTime, long serverReceiveTime, long serverSendTime);
     }
 }

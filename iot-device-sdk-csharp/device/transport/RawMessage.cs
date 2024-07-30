@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2020-2023 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2020-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -49,6 +49,19 @@ namespace IoT.SDK.Device.Transport
             this.Qos = 1;
         }
 
+        
+        /// <summary>
+        /// Initializes a new instance of the RawMessage class.
+        /// </summary>
+        /// <param name="topic">Indicates a message topic.</param>
+        /// <param name="payload">Indicates the message body.</param>
+         public RawMessage(string topic, byte[] payload)
+        {
+            this.Topic = topic;
+            this.BinPayload = payload;
+            this.Qos = 1;
+        }
+        
         /// <summary>
         /// Initializes a new instance of the RawMessage class.
         /// </summary>
@@ -99,7 +112,7 @@ namespace IoT.SDK.Device.Transport
             get => Encoding.UTF8.GetString(BinPayload);
             set => BinPayload = Encoding.UTF8.GetBytes(value);
         }
-    
+
         /// <summary>
         /// Indicates a QoS level. The value can be 0 or 1. The default value is 1.
         /// </summary>
@@ -109,10 +122,12 @@ namespace IoT.SDK.Device.Transport
         /// Indicates a message ID.
         /// </summary>
         public string MessageId { get; set; }
-        
+
         public override string ToString()
         {
             return this.Payload;
         }
+
+        public MqttV5Data MqttV5Data { get; set; }
     }
 }

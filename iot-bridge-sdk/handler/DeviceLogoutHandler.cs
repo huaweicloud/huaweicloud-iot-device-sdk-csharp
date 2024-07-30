@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2022-2022 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2022-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -30,51 +30,26 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using IoT.SDK.Device.Transport;
 using IoT.SDK.Bridge.Clent;
-using IoT.SDK.Device.Utils;
-using NLog;
 
-namespace IoT.SDK.Bridge.Handler {
-    class DeviceLogoutHandler : RawMessageListener {
-        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
-
-        private BridgeClient bridgeClient;
-
-        public DeviceLogoutHandler(BridgeClient bridgeClient)
+namespace IoT.SDK.Bridge.Handler
+{
+    internal class DeviceLogoutHandler : BridgeAbstractHandler<Dictionary<string, object>>
+    {
+        protected override void OnProcessMessage(BridgeClient bridgeClient,
+            string deviceId, string requestId, Dictionary<string, object> dict)
         {
-            this.bridgeClient = bridgeClient;
-        }
+            var resultCode = Convert.ToInt32(dict["result_code"]);
 
-        public void OnMessageReceived(RawMessage message)
-        {
-            Log.Debug("received the response of the device under one bridge logouts, the  message is {0}", message);
-            string requestId = IotUtil.GetRequestId(message.Topic);
-            string deviceId = IotUtil.GetDeviceId(message.Topic);
-            if (string.IsNullOrEmpty(deviceId) || string.IsNullOrEmpty(requestId)) {
-                Log.Error("invalid para");
-                return;
-            }
-            Dictionary<string, object> dict = JsonUtil.ConvertJsonStringToObject<Dictionary<string, object>>(message.ToString());
-            if (dict == null) {
-                Log.Warn("the response of device logout is invalid.");
-                return;
-            }
-            int resultCode = Convert.ToInt32(dict["result_code"]);
-
-            if (bridgeClient.logoutListener != null) {
-                bridgeClient.logoutListener.OnLogout(deviceId, requestId, dict);
+            var listener = bridgeClient.logoutListener;
+            if (listener != null)
+            {
+                listener.OnLogout(deviceId, requestId, dict);
                 return;
             }
 
             var future = bridgeClient.requestIdCache.GetFuture(requestId);
-            if (future != null) {
-                future.SetResult(resultCode);
-            }
+            future?.SetResult(resultCode);
         }
-    
-        public void OnMessagePublished(RawMessage message) { return; }
-        public void OnMessageUnPublished(RawMessage message) { return; }
     }
 }

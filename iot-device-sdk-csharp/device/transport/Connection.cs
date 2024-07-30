@@ -33,7 +33,7 @@ using MQTTnet;
 
 namespace IoT.SDK.Device.Transport
 {
-    internal interface Connection
+    public interface Connection
     {
         /// <summary>
         /// Creates a connection.
@@ -62,7 +62,7 @@ namespace IoT.SDK.Device.Transport
         /// Sets a connection listener.
         /// </summary>
         /// <param name="connectListener">Indicates the listener to set.</param>
-        void SetConnectListener(ConnectListener connectListener);
+        void AddConnectListener(ConnectListener connectListener);
 
         /// <summary>
         /// Subscribes to a topic.
