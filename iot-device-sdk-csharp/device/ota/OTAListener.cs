@@ -38,7 +38,7 @@ namespace IoT.SDK.Device.OTA
         /// <summary>
         /// Called when a version query request is received.
         /// </summary>
-        void OnQueryVersion();
+        void OnQueryVersion(OTAQueryInfo queryInfo);
 
         /// <summary>
         /// Called when a new upgrade package is received.

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2020-2023 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2020-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -30,49 +30,56 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading;
 using IoT.SDK.Device.Client.Listener;
 using IoT.SDK.Device.Client.Requests;
 using IoT.SDK.Device.Config;
 using IoT.SDK.Device.Service;
+using IoT.SDK.Device.Service.DeviceRule;
 using IoT.SDK.Device.Transport;
 using IoT.SDK.Device.Transport.Mqtt;
 using IoT.SDK.Device.Utils;
 using MQTTnet;
+using Newtonsoft.Json;
 using NLog;
 
 namespace IoT.SDK.Device.Client
 {
     public class DeviceClient : RawMessageListener, ConnectListener
     {
-        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+        private static readonly Logger LOG = LogManager.GetCurrentClassLogger();
 
-        private static readonly double AUTO_REPORT_DEVICE_INFO_TIME = 5;
+        private const double AUTO_REPORT_DEVICE_INFO_TIME = 5;
 
-        private static readonly string SDK_VERSION = "C#_v1.3.2";
+        private const string SDK_VERSION = "C#_v1.3.4";
 
         private CommandV3Listener commandV3Listener;
 
-        private ClientConf clientConf;
+        private readonly ClientConf clientConf;
 
-        private Connection connection;
+        public Connection Connection { get; set; }
 
-        private string deviceId;
+        private readonly string deviceId;
 
-        private Dictionary<string, RawMessageListener> rawMessageListenerDic;
+        private readonly Dictionary<string, RawMessageListener> rawMessageListenerDic;
 
-        private AbstractDevice device;
+        private readonly HashSet<string> customTopics;
+
+        private readonly AbstractDevice device;
 
         private Timer timer;
-        
+
+
         public DeviceClient(ClientConf clientConf, AbstractDevice device)
         {
             this.CheckClientConf(clientConf);
             this.clientConf = clientConf;
             this.deviceId = clientConf.DeviceId;
-            this.connection = new MqttConnection(clientConf, this, this);
+            this.Connection = new MqttConnection(clientConf, this, this);
             this.device = device;
             this.rawMessageListenerDic = new Dictionary<string, RawMessageListener>();
+            customTopics = new HashSet<string>();
         }
 
         public CommandListener commandListener { get; set; }
@@ -82,7 +89,7 @@ namespace IoT.SDK.Device.Client
         public DeviceCustomMessageListener deviceCustomMessageListener { get; set; }
 
         public MessagePublishListener messagePublishListener { get; set; }
-        
+
         public PropertyListener propertyListener { get; set; }
 
         public RawDeviceMessageListener rawDeviceMessageListener { get; set; }
@@ -107,6 +114,12 @@ namespace IoT.SDK.Device.Client
                         listener.OnMessageReceived(message);
                         return;
                     }
+                }
+
+                if (customTopics.Contains(topic))
+                {
+                    rawDeviceMessageListener?.OnCustomRawDeviceMessage(topic, false,
+                        new RawDeviceMessage(message.BinPayload));
                 }
 
                 if (topic.Contains("/messages/down"))
@@ -139,16 +152,18 @@ namespace IoT.SDK.Device.Client
                 }
                 else if (topic.Contains("/user/"))
                 {
+                    rawDeviceMessageListener?.OnCustomRawDeviceMessage(topic, true,
+                        new RawDeviceMessage(message.BinPayload));
                     OnCustomCommand(message);
                 }
                 else
                 {
-                    Log.Error("unknown topic: " + topic);
+                    LOG.Error("unknown topic:{}", topic);
                 }
             }
             catch (Exception ex)
             {
-                Log.Error("SDK.Error: message received error, the topic is " + topic);
+                LOG.Error(ex, "SDK.Error: message received error, the topic is {}", topic);
             }
         }
 
@@ -159,7 +174,13 @@ namespace IoT.SDK.Device.Client
         /// <param name="commandRsp">Indicates the command response to report.</param>
         public void RespondCommand(string requestId, CommandRsp commandRsp)
         {
-            Report(new PubMessage(CommonTopic.TOPIC_COMMANDS_RESPONSE + "=" + requestId, JsonUtil.ConvertObjectToJsonString(commandRsp)));
+            if (requestId == DeviceRuleService.ServiceId)
+            {
+                return;
+            }
+
+            Report(new PubMessage(CommonTopic.TOPIC_COMMANDS_RESPONSE + "=" + requestId,
+                JsonUtil.ConvertObjectToJsonString(commandRsp)));
         }
 
         /// <summary>
@@ -182,31 +203,36 @@ namespace IoT.SDK.Device.Client
         /// <param name="iotResult">Indicates the property setting result.</param>
         public void RespondPropsSet(string requestId, IotResult iotResult)
         {
-            Report(new PubMessage(CommonTopic.TOPIC_SYS_PROPERTIES_SET_RESPONSE + "=" + requestId, JsonUtil.ConvertObjectToJsonString(iotResult)));
+            Report(new PubMessage(CommonTopic.TOPIC_SYS_PROPERTIES_SET_RESPONSE + "=" + requestId,
+                JsonUtil.ConvertObjectToJsonString(iotResult)));
         }
 
         public void OnCommand(RawMessage message)
         {
             string requestId = IotUtil.GetRequestId(message.Topic);
-            
+
             Command command = JsonUtil.ConvertJsonStringToObject<Command>(message.ToString());
-            
+
+            OnCommand(requestId, command);
+        }
+
+        public void OnCommand(string requestId, Command command)
+        {
             if (command == null)
             {
-                Log.Error("invalid command");
-
+                LOG.Error("invalid command");
                 return;
             }
 
             if (commandListener != null && (command.deviceId == null || command.deviceId == deviceId))
             {
                 commandListener.OnCommand(requestId, command.serviceId, command.commandName, command.paras);
-
                 return;
             }
 
             device.OnCommand(requestId, command);
         }
+
 
         /// <summary>
         /// Connects to the platform. This method blocks the calling thread and the timeout duration is 20 seconds. When the connection is established, the SDK automatically subscribes to system topics.
@@ -214,30 +240,36 @@ namespace IoT.SDK.Device.Client
         /// <returns>Returns 0 if the connection is successful; returns other values if the connection fails.</returns>
         public int Connect()
         {
-            int ret = connection.Connect();
-            
-            List<MqttTopicFilter> listTopic = new List<MqttTopicFilter>();
+            int ret = Connection.Connect();
 
-            var topicFilterBulderMsgDown = new MqttTopicFilterBuilder().WithTopic(string.Format(CommonTopic.TOPIC_SYS_MESSAGES_DOWN, deviceId)).Build();
-            listTopic.Add(topicFilterBulderMsgDown);
+            var listTopic = new List<MqttTopicFilter>();
 
-            var topicFilterBulderCommand = new MqttTopicFilterBuilder().WithTopic(string.Format(CommonTopic.TOPIC_SYS_COMMAND, deviceId)).Build();
-            listTopic.Add(topicFilterBulderCommand);
+            var topicFilterBuilderMsgDown = new MqttTopicFilterBuilder()
+                .WithTopic(string.Format(CommonTopic.TOPIC_SYS_MESSAGES_DOWN, deviceId)).Build();
+            listTopic.Add(topicFilterBuilderMsgDown);
 
-            var topicFilterBulderShadowGetResponse = new MqttTopicFilterBuilder().WithTopic(string.Format(CommonTopic.TOPIC_SYS_SHADOW_GET_RESPONSE, deviceId)).Build();
-            listTopic.Add(topicFilterBulderShadowGetResponse);
+            var topicFilterBuilderCommand = new MqttTopicFilterBuilder()
+                .WithTopic(string.Format(CommonTopic.TOPIC_SYS_COMMAND, deviceId)).Build();
+            listTopic.Add(topicFilterBuilderCommand);
 
-            var topicFilterBulderPropertiesSet = new MqttTopicFilterBuilder().WithTopic(string.Format(CommonTopic.TOPIC_SYS_PROPERTIES_SET, deviceId)).Build();
-            listTopic.Add(topicFilterBulderPropertiesSet);
+            var topicFilterBuilderShadowGetResponse = new MqttTopicFilterBuilder()
+                .WithTopic(string.Format(CommonTopic.TOPIC_SYS_SHADOW_GET_RESPONSE, deviceId)).Build();
+            listTopic.Add(topicFilterBuilderShadowGetResponse);
 
-            var topicFilterBulderPropertiesGet = new MqttTopicFilterBuilder().WithTopic(string.Format(CommonTopic.TOPIC_SYS_PROPERTIES_GET, deviceId)).Build();
-            listTopic.Add(topicFilterBulderPropertiesGet);
+            var topicFilterBuilderPropertiesSet = new MqttTopicFilterBuilder()
+                .WithTopic(string.Format(CommonTopic.TOPIC_SYS_PROPERTIES_SET, deviceId)).Build();
+            listTopic.Add(topicFilterBuilderPropertiesSet);
 
-            var topicFilterBulderEventsDown = new MqttTopicFilterBuilder().WithTopic(string.Format(CommonTopic.TOPIC_SYS_EVENTS_DOWN, deviceId)).Build();
-            listTopic.Add(topicFilterBulderEventsDown);
+            var topicFilterBuilderPropertiesGet = new MqttTopicFilterBuilder()
+                .WithTopic(string.Format(CommonTopic.TOPIC_SYS_PROPERTIES_GET, deviceId)).Build();
+            listTopic.Add(topicFilterBuilderPropertiesGet);
 
-            connection.SubscribeTopic(listTopic);
-            
+            var topicFilterBuilderEventsDown = new MqttTopicFilterBuilder()
+                .WithTopic(string.Format(CommonTopic.TOPIC_SYS_EVENTS_DOWN, deviceId)).Build();
+            listTopic.Add(topicFilterBuilderEventsDown);
+
+            Connection.SubscribeTopic(listTopic);
+
             return ret;
         }
 
@@ -248,29 +280,94 @@ namespace IoT.SDK.Device.Client
         /// <param name="deviceMessage">Indicates the device message to report.</param>
         public void ReportDeviceMessage(DeviceMessage deviceMessage)
         {
-            Report(new PubMessage(string.Format(CommonTopic.TOPIC_MESSAGES_UP, deviceId), JsonUtil.ConvertObjectToJsonString(deviceMessage)));
+            Report(new PubMessage(string.Format(CommonTopic.TOPIC_MESSAGES_UP, deviceId),
+                JsonUtil.ConvertObjectToJsonString(deviceMessage))
+            {
+                MqttV5Data = deviceMessage.MqttV5Data
+            });
+        }
+
+        /// <summary>
+        /// Reports a raw device message.
+        /// To report a message for a child device, call the setDeviceId API of DeviceMessage to set the device ID of the child device.
+        /// </summary>
+        /// <param name="deviceMessage">Indicates the device message to report.</param>
+        /// <param name="customMessageTopic"></param>
+        public void ReportRawDeviceMessage(RawDeviceMessage deviceMessage, CustomMessageTopic customMessageTopic = null)
+        {
+            var topic = string.Format(CommonTopic.TOPIC_MESSAGES_UP, deviceId);
+            if (customMessageTopic != null)
+            {
+                topic = GetFullTopicFromCustomTopic(customMessageTopic);
+            }
+
+            Report(new PubMessage(topic, deviceMessage.payload)
+            {
+                MqttV5Data = deviceMessage.MqttV5Data
+            });
         }
 
         /// <summary>
         /// Subscribes to a custom topic. System topics are automatically subscribed by the SDK. This method can be used only to subscribe to custom topics.
         /// </summary>
         /// <param name="topic">Indicates the name of the custom topic.</param>
-        public void SubscribeTopic(string topic)
+        public string SubscribeTopic(string topic)
         {
             try
             {
                 List<MqttTopicFilter> listTopic = new List<MqttTopicFilter>();
 
-                var topicFilterBulderPreTopic = new MqttTopicFilterBuilder().WithTopic(string.Format(CommonTopic.PRE_TOPIC, deviceId) + topic).Build();
-                listTopic.Add(topicFilterBulderPreTopic);
+                var topicFilterBuilderPreTopic = new MqttTopicFilterBuilder()
+                    .WithTopic(string.Format(CommonTopic.PRE_TOPIC, deviceId) + topic).Build();
+                listTopic.Add(topicFilterBuilderPreTopic);
 
-                connection.SubscribeTopic(listTopic);
+                Connection.SubscribeTopic(listTopic);
+                return topicFilterBuilderPreTopic.Topic;
                 //// rawMessageListenerDic.Add(topic, rawMessageListener);
             }
             catch (Exception ex)
             {
-                Log.Error("SDK.Error: Subscribe topic fail, the topic is " + topic);
+                LOG.Error(ex, "SDK.Error: Subscribe topic fail, topic:{}", topic);
+                return null;
             }
+        }
+
+        public string SubscribeTopic(CustomMessageTopic topic)
+        {
+            try
+            {
+                List<MqttTopicFilter> listTopic = new List<MqttTopicFilter>();
+
+                var topicFilterBuilderPreTopic = new MqttTopicFilterBuilder()
+                    .WithTopic(GetFullTopicFromCustomTopic(topic)).Build();
+                listTopic.Add(topicFilterBuilderPreTopic);
+
+                Connection.SubscribeTopic(listTopic);
+                var t = topicFilterBuilderPreTopic.Topic;
+                if (!topic.OcPrefix && rawMessageListenerDic.TryGetValue(t, out var existingListener) &&
+                    existingListener == null)
+                {
+                    rawMessageListenerDic.Add(t, null);
+                }
+
+                return topicFilterBuilderPreTopic.Topic;
+            }
+            catch (Exception ex)
+            {
+                LOG.Error(ex, "SDK.Error: Subscribe topic fail, topic:{}", topic);
+                return null;
+            }
+        }
+
+        private string GetFullTopicFromCustomTopic(CustomMessageTopic topic)
+        {
+            var topicString = topic.Suffix;
+            if (topic.OcPrefix)
+            {
+                topicString = string.Format(CommonTopic.PRE_TOPIC, deviceId) + topicString;
+            }
+
+            return topicString;
         }
 
         /// <summary>
@@ -285,19 +382,17 @@ namespace IoT.SDK.Device.Client
             {
                 List<MqttTopicFilter> listTopic = new List<MqttTopicFilter>();
 
-                var topicFilterBulderPreTopic = new MqttTopicFilterBuilder().WithTopic(topic).Build();
-                listTopic.Add(topicFilterBulderPreTopic);
+                var topicFilterBuilderPreTopic = new MqttTopicFilterBuilder().WithTopic(topic).Build();
+                listTopic.Add(topicFilterBuilderPreTopic);
 
-                connection.SubscribeTopic(listTopic);
+                Connection.SubscribeTopic(listTopic);
+                customTopics.Add(topic);
                 if (topicKey == null || listener == null) return;
-                if (!rawMessageListenerDic.ContainsKey(topicKey))
-                {
-                    rawMessageListenerDic.Add(topicKey, listener);
-                }
+                rawMessageListenerDic.TryAdd(topicKey, listener);
             }
             catch (Exception ex)
             {
-                Log.Error("SDK.Error: Subscribe topic fail, the topic is " + topic);
+                LOG.Error(ex, "SDK.Error: Subscribe topic fail, topic:{} ", topic);
             }
         }
 
@@ -320,63 +415,85 @@ namespace IoT.SDK.Device.Client
         public void ConnectComplete()
         {
             var autoEvent = new AutoResetEvent(true);
-            timer = new Timer(p => ReportSdkInfoSync("v1.0", "v1.0"), autoEvent, TimeSpan.FromSeconds(0), TimeSpan.FromDays(AUTO_REPORT_DEVICE_INFO_TIME));
+            timer = new Timer(p => ReportSdkInfoSync("v1.0", "v1.0"), autoEvent, TimeSpan.FromSeconds(0),
+                TimeSpan.FromDays(AUTO_REPORT_DEVICE_INFO_TIME));
 
-            if (connectListener != null)
-            {
-                connectListener.ConnectComplete();
-            }
+
+            connectListener?.ConnectComplete();
         }
 
         public void ConnectionLost()
         {
-            if (timer != null)
-            {
-                timer.Dispose();
-            }
+            connectListener?.ConnectionLost();
+            timer?.Dispose();
         }
 
         public void ConnectFail()
         {
+            connectListener?.ConnectFail();
         }
 
         public void ReportSdkInfoSync(string swVersion, string fwVersion)
         {
             string sdkInfoStr = IotUtil.ReadJsonFile(CommonFilePath.DEVICE_INFO_PATH);
-
-            if (!string.IsNullOrEmpty(sdkInfoStr))
+            try
             {
-                Dictionary<string, string> sdkInfoDic = JsonUtil.ConvertJsonStringToDic<string, string>(sdkInfoStr);
-
-                if (sdkInfoDic["sw_version"]?.ToString() == swVersion && sdkInfoDic["fw_version"]?.ToString() == fwVersion)
+                if (!string.IsNullOrEmpty(sdkInfoStr))
                 {
-                    DateTime start = Convert.ToDateTime(DateTime.Parse(sdkInfoDic["event_time"]?.ToString()).ToShortDateString());
-                    DateTime end = DateTime.Now;
-                    TimeSpan sp = end.Subtract(start);
-                    
-                    if (sp.Days < AUTO_REPORT_DEVICE_INFO_TIME)
+                    Dictionary<string, string> sdkInfoDic = JsonUtil.ConvertJsonStringToDic<string, string>(sdkInfoStr);
+
+                    if (sdkInfoDic["sw_version"]?.ToString() == swVersion &&
+                        sdkInfoDic["fw_version"]?.ToString() == fwVersion)
                     {
-                        return;
+                        DateTime start =
+                            Convert.ToDateTime(DateTime.Parse(sdkInfoDic["event_time"]?.ToString())
+                                .ToShortDateString());
+                        DateTime end = DateTime.Now;
+                        TimeSpan sp = end.Subtract(start);
+
+                        if (sp.Days < AUTO_REPORT_DEVICE_INFO_TIME)
+                        {
+                            return;
+                        }
                     }
                 }
             }
-            
-            Dictionary<string, object> node = new Dictionary<string, object>();
-            node.Add("device_sdk_version", SDK_VERSION);
-            node.Add("sw_version", swVersion);
-            node.Add("fw_version", fwVersion);
+            catch (Exception e)
+            {
+                LOG.Error(e, "check last device info failed");
+            }
 
-            DeviceEvent deviceEvent = new DeviceEvent();
-            deviceEvent.eventType = "sdk_info_report";
-            deviceEvent.paras = node;
-            deviceEvent.serviceId = "$sdk_info";
-            deviceEvent.eventTime = IotUtil.GetEventTime();
-
-            node.Add("event_time", DateTime.Now.ToString());
+            var node = GenerateDeviceInfo(swVersion, fwVersion);
             IotUtil.WriteJsonFile(CommonFilePath.DEVICE_INFO_PATH, JsonUtil.ConvertObjectToJsonString(node));
+            ReportDeviceInfo(swVersion, fwVersion);
+        }
+
+        public void ReportDeviceInfo(string swVersion, string fwVersion)
+        {
+            var node = GenerateDeviceInfo(swVersion, fwVersion);
+
+            var deviceEvent = new DeviceEvent
+            {
+                serviceId = "$sdk_info",
+                eventType = "sdk_info_report",
+                paras = node,
+                eventTime = IotUtil.GetEventTime()
+            };
 
             ReportEvent(deviceEvent);
         }
+
+        private Dictionary<string, object> GenerateDeviceInfo(string swVersion, string fwVersion)
+        {
+            return new Dictionary<string, object>
+            {
+                { "device_sdk_version", SDK_VERSION },
+                { "sw_version", swVersion },
+                { "fw_version", fwVersion },
+                { "event_time", DateTime.Now.ToString(CultureInfo.InvariantCulture) }
+            };
+        }
+
 
         /// <summary>
         /// Reports an event.
@@ -384,14 +501,23 @@ namespace IoT.SDK.Device.Client
         /// <param name="evnt">Indicates the event to report.</param>
         public void ReportEvent(DeviceEvent evnt)
         {
-            string deviceId = clientConf.DeviceId;
-            DeviceEvents events = new DeviceEvents();
-            events.deviceId = deviceId;
-            List<DeviceEvent> services = new List<DeviceEvent>();
-            services.Add(evnt);
-            events.services = services;
+            ReportEvent(null, evnt);
+        }
 
-            Report(new PubMessage(CommonTopic.TOPIC_SYS_EVENTS_UP, events));
+        public void ReportEvent(DeviceEvents deviceEvents)
+        {
+            Report(new PubMessage(CommonTopic.TOPIC_SYS_EVENTS_UP, deviceEvents));
+        }
+
+        public void ReportEvent(string objectDeviceId, DeviceEvent deviceEvent)
+        {
+            var services = new List<DeviceEvent> { deviceEvent };
+            var events = new DeviceEvents
+            {
+                deviceId = objectDeviceId ?? clientConf.DeviceId,
+                services = services
+            };
+            ReportEvent(events);
         }
 
         /// <summary>
@@ -404,6 +530,24 @@ namespace IoT.SDK.Device.Client
         }
 
         /// <summary>
+        /// Reports device properties.
+        /// </summary>
+        /// <param name="properties">Indicates the properties to report.</param>
+        public void ReportProperties(DeviceProperties properties)
+        {
+            Report(new PubMessage(CommonTopic.TOPIC_PROPERTIES_REPORT, JsonConvert.SerializeObject(properties)));
+        }
+
+        public string GetShadow(DeviceShadowRequest shadowRequest, string requestId = null)
+        {
+            requestId ??= Guid.NewGuid().ToString();
+            var topic = CommonTopic.TOPIC_SYS_SHADOW_GET + "=" + requestId;
+            var msg = JsonConvert.SerializeObject(shadowRequest);
+            Report(new PubMessage(topic, msg));
+            return requestId;
+        }
+
+        /// <summary>
         /// Reports a message.
         /// </summary>
         /// <typeparam name="T">Indicates a physical object.</typeparam>
@@ -412,12 +556,14 @@ namespace IoT.SDK.Device.Client
         {
             try
             {
-                RawMessage rawMessage = new RawMessage(string.Format(pubMessage.Topic, deviceId), pubMessage.Message);
-                connection.PublishMessage(rawMessage);
+                var rawMessage = new RawMessage(string.Format(pubMessage.Topic, deviceId), pubMessage.Payload);
+                Connection.PublishMessage(rawMessage);
+                device.CatchPropertiesForDeviceRuleProperties(pubMessage);
             }
             catch (Exception ex)
             {
-                Log.Error("SDK.Error: Report msg error, the message is " + pubMessage.Message);
+                LOG.Error(ex, "SDK.Error: Report msg failed");
+                LOG.Error("The report message is {}", pubMessage.Message);
             }
         }
 
@@ -426,24 +572,29 @@ namespace IoT.SDK.Device.Client
         /// </summary>
         public void Close()
         {
-            connection.Close();
+            Connection.Close();
         }
 
-        private void CheckClientConf(ClientConf clientConf)
+        public bool IsConnected()
         {
-            if (clientConf == null)
+            return Connection.IsConnected();
+        }
+
+        private void CheckClientConf(ClientConf config)
+        {
+            if (config == null)
             {
                 throw new Exception("clientConf is null");
             }
 
-            if (clientConf.DeviceId == null)
+            if (config.DeviceId == null)
             {
                 throw new Exception("clientConf.deviceId is null");
             }
 
-            if (clientConf.ServerUri == null)
+            if (config.ServerUri == null)
             {
-                throw new Exception("clientConf.getSecret() is null");
+                throw new Exception("clientConf ServerAddress is null");
             }
         }
 
@@ -453,7 +604,7 @@ namespace IoT.SDK.Device.Client
 
             if (deviceEvents == null)
             {
-                Log.Error("invalid events");
+                LOG.Error("invalid events");
                 return;
             }
 
@@ -465,7 +616,7 @@ namespace IoT.SDK.Device.Client
             CommandV3 commandV3 = JsonUtil.ConvertJsonStringToObject<CommandV3>(message.ToString());
             if (commandV3 == null)
             {
-                Log.Error("invalid commandV3");
+                LOG.Error("invalid commandV3");
 
                 return;
             }
@@ -478,17 +629,20 @@ namespace IoT.SDK.Device.Client
 
         private void OnShadowCommand(RawMessage message)
         {
-            string requestId = IotUtil.GetRequestId(message.Topic);
-            deviceShadowListener.OnShadowCommand(requestId, message.Payload);
+            var requestId = IotUtil.GetRequestId(message.Topic);
+            deviceShadowListener?.OnShadowCommand(requestId, message.Payload);
+
+            var shadows = JsonUtil.ConvertJsonStringToObject<DeviceShadowResponse>(message.Payload);
+            device.OnDeviceShadow(requestId, shadows);
         }
 
         private void OnDeviceMessage(RawMessage message)
         {
-            RawDeviceMessage rawDeviceMessage = new RawDeviceMessage(message.BinPayload);
-            if (rawDeviceMessageListener != null)
+            var rawDeviceMessage = new RawDeviceMessage(message.BinPayload)
             {
-                rawDeviceMessageListener.OnRawDeviceMessage(rawDeviceMessage);
-            }
+                MqttV5Data = message.MqttV5Data
+            };
+            rawDeviceMessageListener?.OnRawDeviceMessage(rawDeviceMessage);
 
 
             DeviceMessage deviceMessage = rawDeviceMessage.ToDeviceMessage();
@@ -507,6 +661,8 @@ namespace IoT.SDK.Device.Client
 
                 HandleDeviceMessage(deviceMessage);
             }
+
+            device.OnDeviceMessage(deviceMessage);
         }
 
         /// <summary>
@@ -521,7 +677,7 @@ namespace IoT.SDK.Device.Client
                 bootstrapMessageListener.OnRetryBootstrapMessage();
             }
         }
-        
+
         private void OnPropertiesSet(RawMessage message)
         {
             string requestId = IotUtil.GetRequestId(message.Topic);
@@ -569,12 +725,7 @@ namespace IoT.SDK.Device.Client
         /// <param name="message"></param>
         private void OnCustomCommand(RawMessage message)
         {
-            deviceCustomMessageListener.OnCustomMessageCommand(message.Payload);
-        }
-
-		public virtual void ReportEvent(string deviceId, DeviceEvent evnt)
-        {
-            return;
+            deviceCustomMessageListener?.OnCustomMessageCommand(message.Payload);
         }
     }
 }

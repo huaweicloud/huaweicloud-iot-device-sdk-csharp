@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2020-2020 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2020-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -61,6 +61,11 @@ namespace IoT.SDK.Device.OTA
 
         private OTAListener otaListener;
 
+        public override string GetServiceId()
+        {
+            return "$ota";
+        }
+
         /// <summary>
         /// Sets an OTA listener.
         /// </summary>
@@ -84,7 +89,8 @@ namespace IoT.SDK.Device.OTA
 
             if (deviceEvent.eventType == "version_query")
             {
-                otaListener.OnQueryVersion();
+                OTAQueryInfo queryInfo = JsonUtil.ConvertDicToObject<OTAQueryInfo>(deviceEvent.paras);
+                otaListener.OnQueryVersion(queryInfo);
             }
             else if (deviceEvent.eventType == "firmware_upgrade" || deviceEvent.eventType == "software_upgrade")
             {

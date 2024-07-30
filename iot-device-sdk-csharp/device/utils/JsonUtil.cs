@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2020-2020 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2020-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -43,12 +43,7 @@ namespace IoT.SDK.Device.Utils
         /// <returns>Returns a JSON string.</returns>
         public static string ConvertObjectToJsonString(object o)
         {
-            if (o == null)
-            {
-                return null;
-            }
-
-            return JsonConvert.SerializeObject(o);
+            return o == null ? null : JsonConvert.SerializeObject(o);
         }
 
         /// <summary>
@@ -57,17 +52,18 @@ namespace IoT.SDK.Device.Utils
         /// <typeparam name="T">Indicates the object class.</typeparam>
         /// <param name="jsonString"></param>
         /// <returns></returns>
-        public static T ConvertJsonStringToObject<T>(string jsonString)
+        public static T ConvertJsonStringToObject<T>(string jsonString, JsonSerializerSettings settings = null)
         {
             try
             {
-                return JsonConvert.DeserializeObject<T>(jsonString);
+                return JsonConvert.DeserializeObject<T>(jsonString, settings);
             }
             catch (Exception ex)
             {
                 return default(T);
             }
         }
+
 
         /// <summary>
         /// Converts a data dictionary to an object.

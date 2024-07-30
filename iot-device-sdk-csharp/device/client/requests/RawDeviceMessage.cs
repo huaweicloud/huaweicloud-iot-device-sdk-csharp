@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2023 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2023-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -28,10 +28,10 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using IoT.SDK.Device.Transport;
 using IoT.SDK.Device.Utils;
 using Newtonsoft.Json;
 
@@ -42,7 +42,7 @@ namespace IoT.SDK.Device.Client.Requests
     /// </summary>
     public class RawDeviceMessage
     {
-        private static readonly HashSet<String> SYSTEM_MESSAGE_KEYS = new HashSet<String>
+        private static readonly HashSet<string> SYSTEM_MESSAGE_KEYS = new HashSet<string>
             { "name", "id", "content", "object_device_id" };
 
         /// <summary>
@@ -56,9 +56,17 @@ namespace IoT.SDK.Device.Client.Requests
         /// Constructor used to create a RawDeviceMessage object.
         /// </summary>
         /// <param name="payload">Indicates the original received payload.</param>
-        public RawDeviceMessage(byte[] payload)
+        /// <param name="mqttV5Data"></param>
+        public RawDeviceMessage(byte[] payload, MqttV5Data mqttV5Data = null)
         {
             this.payload = payload;
+            this.MqttV5Data = mqttV5Data;
+        }
+
+        public RawDeviceMessage(string payload, MqttV5Data mqttV5Data = null)
+        {
+            this.payload = Encoding.UTF8.GetBytes(payload);
+            this.MqttV5Data = mqttV5Data;
         }
 
         /// <summary>
@@ -66,7 +74,17 @@ namespace IoT.SDK.Device.Client.Requests
         /// </summary>
         public byte[] payload { get; set; }
 
-        public String ToUtf8String()
+
+        /// <summary>
+        /// Indicates the mqtt v5 data
+        /// </summary>
+        public MqttV5Data MqttV5Data { get; set; }
+
+
+        /// <summary>
+        /// use <see cref="payload"/> to get raw bytes.
+        /// </summary>
+        public string ToUtf8String()
         {
             return Encoding.UTF8.GetString(payload);
         }
@@ -80,7 +98,7 @@ namespace IoT.SDK.Device.Client.Requests
                     ? null
                     : JsonUtil.ConvertDicToObject<DeviceMessage>(d);
             }
-            catch (JsonReaderException)
+            catch (JsonException)
             {
                 return null;
             }

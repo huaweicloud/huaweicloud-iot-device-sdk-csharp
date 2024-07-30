@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2022-2022 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2022-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -28,42 +28,20 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using IoT.SDK.Device.Transport;
 using IoT.SDK.Bridge.Clent;
-using IoT.SDK.Device.Utils;
 using NLog;
 
-namespace IoT.SDK.Bridge.Handler {
-    class DeviceDisConnHandler : RawMessageListener {
-        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+namespace IoT.SDK.Bridge.Handler
+{
+    internal class DeviceDisConnHandler : BridgeAbstractHandler<string>
+    {
+        private static readonly Logger LOG = LogManager.GetCurrentClassLogger();
 
-        private BridgeClient bridgeClient;
-
-        public DeviceDisConnHandler(BridgeClient bridgeClient)
+        protected override void OnProcessMessage(BridgeClient bridgeClient, string deviceId,
+            string requestId, string message)
         {
-            this.bridgeClient = bridgeClient;
+            LOG.Debug("received the message of the device under one bridge disconnects, the  message is {0}", message);
+            bridgeClient.bridgeDeviceDisConnListener?.OnDisConnect(deviceId);
         }
-
-        public void OnMessageReceived(RawMessage message)
-        {
-            Log.Debug("received the message of the device under one bridge disconnects, the  message is {0}", message);
-            string deviceId = IotUtil.GetDeviceId(message.Topic);
-            if (string.IsNullOrEmpty(deviceId)) {
-                Log.Error("invalid deviceId");
-                return;
-            }
-
-            if (bridgeClient.bridgeDeviceDisConnListener != null) {
-                bridgeClient.bridgeDeviceDisConnListener.OnDisConnect(deviceId);
-            }
-
-            return;
-        }
-
-        public void OnMessagePublished(RawMessage message) { return; }
-        public void OnMessageUnPublished(RawMessage message) { return; }
     }
 }

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2020-2020 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2020-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -28,12 +28,13 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using IoT.SDK.Device.Client.Requests;
 using IoT.SDK.Device.Config;
 using IoT.SDK.Device.Gateway.Requests;
+using IoT.SDK.Device.Gateway.response;
+using IoT.SDK.Device.Gateway.Response;
 using IoT.SDK.Device.Transport;
 using IoT.SDK.Device.Utils;
 using NLog;
@@ -47,7 +48,9 @@ namespace IoT.SDK.Device.Gateway
     {
         private static readonly Logger Log = LogManager.GetCurrentClassLogger();
 
-        private SubDevDiscoveryListener subDevDiscoveryListener;
+        public SubDevDiscoveryListener subDevDiscoveryListener { get; set; }
+
+        public GtwOperateSubDeviceListener gtwOperateSubDeviceListener { get; set; }
 
         private SubDevicesPersistence subDevicesPersistence;
 
@@ -59,17 +62,17 @@ namespace IoT.SDK.Device.Gateway
         /// <param name="port">Indicates the port for device access.</param>
         /// <param name="deviceId">Indicates the device ID.</param>
         /// <param name="deviceSecret">Indicates the secret.</param>
-        public AbstractGateway(SubDevicesPersistence subDevicesPersistence, string serverUri, int port, string deviceId, string deviceSecret) : base(serverUri, port, deviceId, deviceSecret)
+        public AbstractGateway(SubDevicesPersistence subDevicesPersistence, string serverUri, int port, string deviceId,
+            string deviceSecret) : base(serverUri, port, deviceId, deviceSecret)
         {
             this.subDevicesPersistence = subDevicesPersistence;
-
             GetClient().connectListener = this;
         }
 
-        public AbstractGateway(SubDevicesPersistence subDevicesPersistence, string serverUri, int port, string deviceId, X509Certificate deviceCert) : base(serverUri, port, deviceId, deviceCert)
+        public AbstractGateway(SubDevicesPersistence subDevicesPersistence, string serverUri, int port, string deviceId,
+            X509Certificate deviceCert) : base(serverUri, port, deviceId, deviceCert)
         {
             this.subDevicesPersistence = subDevicesPersistence;
-
             GetClient().connectListener = this;
         }
 
@@ -113,13 +116,13 @@ namespace IoT.SDK.Device.Gateway
         /// <param name="services">Indicates the properties to report.</param>
         public void ReportSubDeviceProperties(string deviceId, List<ServiceProperty> services)
         {
-            DeviceProperty deviceProperty = new DeviceProperty();
-            deviceProperty.deviceId = deviceId;
-            deviceProperty.services = services;
+            var deviceProperty = new DeviceProperty
+            {
+                deviceId = deviceId,
+                services = services
+            };
 
-            List<DeviceProperty> deviceProperties = new List<DeviceProperty>();
-            deviceProperties.Add(deviceProperty);
-            ReportSubDeviceProperties(deviceProperties);
+            ReportSubDeviceProperties(new List<DeviceProperty> { deviceProperty });
         }
 
         /// <summary>
@@ -136,18 +139,29 @@ namespace IoT.SDK.Device.Gateway
         /// <summary>
         /// Reports the status for a child device.
         /// </summary>
-        /// <param name="deviceId">Indicates the ID of the child device.</param>
+        /// <param name="subDeviceId">Indicates the ID of the child device.</param>
         /// <param name="status">Indicates the status to report.</param>
-        public void ReportSubDeviceStatus(string deviceId, string status)
+        public void ReportSubDeviceStatus(string subDeviceId, string status)
         {
-            DeviceStatus deviceStatus = new DeviceStatus();
-            deviceStatus.deviceId = deviceId;
-            deviceStatus.status = status;
+            var deviceStatus = new DeviceStatus
+            {
+                deviceId = subDeviceId,
+                status = status
+            };
 
-            List<DeviceStatus> statuses = new List<DeviceStatus>();
-            statuses.Add(deviceStatus);
+            ReportSubDeviceStatus(new List<DeviceStatus> { deviceStatus });
+        }
 
-            ReportSubDeviceStatus(statuses);
+        private void ReportSubDeviceEvent(string eventType, Dictionary<string, object> paras)
+        {
+            var deviceEvent = new DeviceEvent
+            {
+                serviceId = "$sub_device_manager",
+                eventTime = IotUtil.GetTimeStamp(),
+                eventType = eventType,
+                paras = paras
+            };
+            GetClient().ReportEvent(deviceEvent);
         }
 
         /// <summary>
@@ -156,15 +170,11 @@ namespace IoT.SDK.Device.Gateway
         /// <param name="statuses">Indicates the statuses to report.</param>
         public void ReportSubDeviceStatus(List<DeviceStatus> statuses)
         {
-            DeviceEvent deviceEvent = new DeviceEvent();
-            deviceEvent.serviceId = "$sub_device_manager";
-            deviceEvent.eventTime = IotUtil.GetTimeStamp();
-            deviceEvent.eventType = "sub_device_update_status";
-
-            Dictionary<string, object> para = new Dictionary<string, object>();
-            para.Add("device_statuses", statuses);
-            deviceEvent.paras = para;
-            GetClient().ReportEvent(deviceEvent);
+            ReportSubDeviceEvent("sub_device_update_status",
+                new Dictionary<string, object>
+                {
+                    { "device_statuses", statuses }
+                });
         }
 
         /// <summary>
@@ -173,15 +183,11 @@ namespace IoT.SDK.Device.Gateway
         /// <param name="subDeviceInfo">Indicates the list of sub device information to be added, with a maximum of 50 devices added at a time.</param>
         public void ReportAddSubDevice(List<DeviceInfo> subDeviceInfo)
         {
-            DeviceEvent deviceEvent = new DeviceEvent();
-            deviceEvent.serviceId = "$sub_device_manager";
-            deviceEvent.eventTime = IotUtil.GetTimeStamp();
-            deviceEvent.eventType = "add_sub_device_request";
-            
-            Dictionary<string, object> para = new Dictionary<string, object>();
-            para.Add("devices", subDeviceInfo);
-            deviceEvent.paras = para;
-            GetClient().ReportEvent(deviceEvent);
+            ReportSubDeviceEvent("add_sub_device_request",
+                new Dictionary<string, object>
+                {
+                    { "devices", subDeviceInfo }
+                });
         }
 
         /// <summary>
@@ -190,47 +196,63 @@ namespace IoT.SDK.Device.Gateway
         /// <param name="devicesId">Indicates the list of sub devices (device ID) to be deleted, with a maximum of 50 devices to be deleted.</param>
         public void ReportDeleteSubDevice(List<string> devicesId)
         {
-            DeviceEvent deviceEvent = new DeviceEvent();
-            deviceEvent.serviceId = "$sub_device_manager";
-            deviceEvent.eventTime = IotUtil.GetTimeStamp();
-            deviceEvent.eventType = "delete_sub_device_request";
-
-            Dictionary<string, object> para = new Dictionary<string, object>();
-            para.Add("devices", devicesId);
-            deviceEvent.paras = para;
-            GetClient().ReportEvent(deviceEvent);
+            ReportSubDeviceEvent("delete_sub_device_request",
+                new Dictionary<string, object>
+                {
+                    { "devices", devicesId }
+                });
         }
 
         public override void OnEvent(DeviceEvents deviceEvents)
         {
             base.OnEvent(deviceEvents);
+            // For a sub device
+            var subDeviceId = deviceEvents.deviceId;
+            if (subDeviceId == null || subDeviceId == deviceId) return;
 
-            foreach (DeviceEvent deviceEvent in deviceEvents.services)
+            foreach (var deviceEvent in deviceEvents.services)
             {
-                if (deviceEvent.eventType == "start_scan")
-                {
-                    ScanSubdeviceNotify scanSubdeviceNotify = JsonUtil.ConvertDicToObject<ScanSubdeviceNotify>(
-                        deviceEvent.paras);
+                OnOneSubDeviceEvent(deviceEvent, subDeviceId);
+            }
+        }
 
-                    if (subDevDiscoveryListener != null)
-                    {
-                        subDevDiscoveryListener.OnScan(scanSubdeviceNotify);
-                    }
-                }
-                else if (deviceEvent.eventType == "add_sub_device_notify")
+        private void OnOneSubDeviceEvent(DeviceEvent deviceEvent, string subDeviceId)
+        {
+            switch (deviceEvent.eventType)
+            {
+                case "start_scan":
                 {
-                    SubDevicesInfo subDevicesInfo = JsonUtil.ConvertDicToObject<SubDevicesInfo>(
-                        deviceEvent.paras);
-
-                    OnAddSubDevices(subDevicesInfo);
+                    subDevDiscoveryListener?.OnScan(
+                        JsonUtil.ConvertDicToObject<ScanSubdeviceNotify>(deviceEvent.paras));
+                    break;
                 }
-                else if (deviceEvent.eventType == "delete_sub_device_notify")
+                case "add_sub_device_notify":
                 {
-                    SubDevicesInfo subDevicesInfo = JsonUtil.ConvertDicToObject<SubDevicesInfo>(
-                        deviceEvent.paras);
-
-                    OnDeleteSubDevices(subDevicesInfo);
+                    OnAddSubDevices(JsonUtil.ConvertDicToObject<SubDevicesInfo>(deviceEvent.paras));
+                    break;
                 }
+                case "delete_sub_device_notify":
+                {
+                    OnDeleteSubDevices(JsonUtil.ConvertDicToObject<SubDevicesInfo>(deviceEvent.paras));
+                    break;
+                }
+                case "add_sub_device_response":
+                {
+                    SyncSubDevices();
+                    gtwOperateSubDeviceListener?.OnAddSubDeviceRsp(
+                        JsonUtil.ConvertDicToObject<GtwAddSubDeviceRsp>(deviceEvent.paras), deviceEvent.eventId);
+                    break;
+                }
+                case "delete_sub_device_response":
+                {
+                    SyncSubDevices();
+                    gtwOperateSubDeviceListener?.OnDelSubDeviceRsp(
+                        JsonUtil.ConvertDicToObject<GtwDelSubDeviceRsp>(deviceEvent.paras), deviceEvent.eventId);
+                    break;
+                }
+                default:
+                    OnSubdevEvent(subDeviceId, deviceEvent);
+                    break;
             }
         }
 
@@ -244,13 +266,49 @@ namespace IoT.SDK.Device.Gateway
             // Sub device.
             if (command.deviceId != null && command.deviceId != this.deviceId)
             {
-                this.OnSubdevCommand(requestId, command);
-
+                OnSubdevCommand(requestId, command);
                 return;
             }
 
             // Gateway
             base.OnCommand(requestId, command);
+        }
+
+
+        public override void OnDeviceMessage(DeviceMessage message)
+        {
+            // Gateway
+            if (message.deviceId != null && message.deviceId != this.deviceId)
+            {
+                OnSubdevMessage(message);
+                return;
+            }
+
+            base.OnDeviceMessage(message);
+        }
+
+        public override void OnPropertiesGet(string requestId, PropsGet propsGet)
+        {
+            // Gateway
+            if (propsGet.deviceId != null && propsGet.deviceId != this.deviceId)
+            {
+                this.OnSubdevPropertiesGet(requestId, propsGet);
+                return;
+            }
+
+            base.OnPropertiesGet(requestId, propsGet);
+        }
+
+        public override void OnPropertiesSet(string requestId, PropsSet propsSet)
+        {
+            // Gateway
+            if (propsSet.deviceId != null && propsSet.deviceId != this.deviceId)
+            {
+                OnSubdevPropertiesSet(requestId, propsSet);
+                return;
+            }
+
+            base.OnPropertiesSet(requestId, propsSet);
         }
 
         /// <summary>
@@ -310,20 +368,26 @@ namespace IoT.SDK.Device.Gateway
         /// <param name="message">Indicates the message.</param>
         public abstract void OnSubdevMessage(DeviceMessage message);
 
+        public abstract void OnSubdevEvent(string subDeviceId, DeviceEvent deviceEvent);
+
         /// <summary>
         /// Synchronizes child device details to the platform.
         /// </summary>
-        protected void SyncSubDevices()
+        public void SyncSubDevices(bool syncAll = false)
         {
-            Log.Info("start to syncSubDevices, local version is " + subDevicesPersistence.GetVersion());
+            Log.Info("start to syncSubDevices, local version is {}", subDevicesPersistence.GetVersion());
 
-            DeviceEvent deviceEvent = new DeviceEvent();
-            deviceEvent.eventType = "sub_device_sync_request";
-            deviceEvent.serviceId = "sub_device_manager";
-            deviceEvent.eventTime = IotUtil.GetTimeStamp();
+            DeviceEvent deviceEvent = new DeviceEvent
+            {
+                eventType = "sub_device_sync_request",
+                serviceId = "$sub_device_manager",
+                eventTime = IotUtil.GetTimeStamp()
+            };
 
-            Dictionary<string, object> para = new Dictionary<string, object>();
-            para.Add("version", subDevicesPersistence.GetVersion());
+            var para = new Dictionary<string, object>
+            {
+                { "version", syncAll ? 0 : subDevicesPersistence.GetVersion() }
+            };
             deviceEvent.paras = para;
             GetClient().ReportEvent(deviceEvent);
         }

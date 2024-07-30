@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2022-2022 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2022-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -28,54 +28,24 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using IoT.SDK.Device.Transport;
 using IoT.SDK.Bridge.Clent;
-using IoT.SDK.Device.Utils;
 using IoT.SDK.Device.Client.Requests;
 using IoT.SDK.Bridge.Request;
-using NLog;
 
-namespace IoT.SDK.Bridge.Handler {
-    class BridgeCommandHandler : RawMessageListener {
-        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
-
-        private BridgeClient bridgeClient;
-
-        public BridgeCommandHandler(BridgeClient bridgeClient)
+namespace IoT.SDK.Bridge.Handler
+{
+    internal class BridgeCommandHandler : BridgeAbstractHandler<Command>
+    {
+        protected override void OnProcessMessage(BridgeClient bridgeClient, string deviceId,
+            string requestId, Command message)
         {
-            this.bridgeClient = bridgeClient;
+            if (bridgeClient.bridgeCommandListener == null) return;
+            var cmd = new BridgeCommand
+            {
+                deviceId = deviceId,
+                command = message
+            };
+            bridgeClient.bridgeCommandListener.OnCommand(deviceId, requestId, cmd);
         }
-
-        public void OnMessageReceived(RawMessage message)
-        {
-            string topic = message.Topic;
-            string requestId = IotUtil.GetRequestId(topic);
-            Command command = JsonUtil.ConvertJsonStringToObject<Command>(message.ToString());
-            if (command == null) {
-                Log.Error("invalid command");
-                return;
-            }
-            if (!topic.Contains(BridgeClient.BRIDGE_TOPIC_KEYWORD)) {
-                Log.Error("invalid topic");
-                return;
-            }
-            string deviceId = IotUtil.GetDeviceId(topic);
-            if (string.IsNullOrEmpty(deviceId)) {
-                return;
-            }
-            if (bridgeClient.bridgeCommandListener != null) {
-                BridgeCommand cmd = new BridgeCommand();
-                cmd.command = command;
-                bridgeClient.bridgeCommandListener.OnCommand(deviceId, requestId, cmd);
-            }
-
-            return;
-        }
-
-        public void OnMessagePublished(RawMessage message) { return; }
-        public void OnMessageUnPublished(RawMessage message) { return; }
     }
 }

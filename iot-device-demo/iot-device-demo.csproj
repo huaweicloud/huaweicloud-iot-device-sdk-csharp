@@ -1,22 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <RootNamespace>iot_device_demo</RootNamespace>
+    </PropertyGroup>
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <RootNamespace>iot_device_demo</RootNamespace>
-  </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="DotNetty.Handlers" Version="0.6.0" />
+        <PackageReference Include="NLog" Version="4.7.0" />
+        <PackageReference Include="DotNetty.Codecs" Version="0.6.0" />
+        <PackageReference Include="DotNetty.Transport" Version="0.6.0" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="NLog" Version="4.7.0" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\iot-bridge-sdk\iot-bridge-sdk.csproj" />
+        <ProjectReference Include="..\iot-device-sdk-csharp\iot-device-sdk-csharp.csproj" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\iot-device-sdk-csharp\iot-device-sdk-csharp.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="C:\Users\l30003490\.nuget\packages\nlog.config\4.7.0\contentFiles\any\any\NLog.config">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
+    <ItemGroup>
+        <Content Include="config\**" CopyToOutputDirectory="PreserveNewest" />
+        <Content Include="NLog.config" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
 </Project>

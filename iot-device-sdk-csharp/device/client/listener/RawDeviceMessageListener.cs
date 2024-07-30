@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2023 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2023-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -38,10 +38,19 @@ namespace IoT.SDK.Device.Client.Listener
     public interface RawDeviceMessageListener
     {
         /// <summary>
-        /// Called when a device message delivered by the platform is received.
+        /// Called when a device message is received, this message is delivered by the platform from system topic.
         /// </summary>
         /// <param name="rawDeviceMessage">Indicates the message content.</param>
         void OnRawDeviceMessage(RawDeviceMessage rawDeviceMessage);
+
+        /// <summary>
+        /// Called when a device message is received, this message is delivered by the platform from custom topic.
+        /// </summary>
+        /// <param name="topic">indicate custom topic from which this message is delivered</param>
+        /// <param name="topicStartsWithOc">if this custom topic is start with $oc/user </param>
+        /// <param name="rawDeviceMessage">Indicates the message content.</param>
+        void OnCustomRawDeviceMessage(string topic, bool topicStartsWithOc, RawDeviceMessage rawDeviceMessage)
+        {
+        }
     }
 }
-

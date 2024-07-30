@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2020-2020 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2020-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -30,6 +30,7 @@
 
 using System.Collections.Generic;
 using IoT.SDK.Device.Utils;
+using Newtonsoft.Json;
 
 namespace IoT.SDK.Device.Client.Requests
 {

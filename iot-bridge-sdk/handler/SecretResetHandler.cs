@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2022-2022 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2022-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -28,55 +28,27 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using IoT.SDK.Device.Transport;
 using IoT.SDK.Bridge.Clent;
-using IoT.SDK.Device.Utils;
 using IoT.SDK.Bridge.Response;
 using NLog;
 
-namespace IoT.SDK.Bridge.Handler {
-    class SecretResetHandler : RawMessageListener {
-        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+namespace IoT.SDK.Bridge.Handler
+{
+    internal class SecretResetHandler : BridgeAbstractHandler<ResetDeviceSecretResponse>
+    {
+        private static readonly Logger LOG = LogManager.GetCurrentClassLogger();
 
-        private BridgeClient bridgeClient;
-
-        public SecretResetHandler(BridgeClient bridgeClient)
+        protected override void OnProcessMessage(BridgeClient bridgeClient,
+            string deviceId, string requestId, ResetDeviceSecretResponse rsp)
         {
-            this.bridgeClient = bridgeClient;
+            var newSecret = (string)rsp.paras?["new_secret"];
+            if (string.IsNullOrEmpty(newSecret))
+            {
+                LOG.Warn("new secret is null.");
+                return;
+            }
+
+            bridgeClient.resetDeviceSecretListener?.OnResetDeviceSecret(deviceId, requestId, rsp.resultCode, newSecret);
         }
-
-        public void OnMessageReceived(RawMessage message)
-        {
-            Log.Debug("received the response of the bridge resets device secret, the  message is {0}", message);
-            string requestId = IotUtil.GetRequestId(message.Topic);
-            string deviceId = IotUtil.GetDeviceId(message.Topic);
-            if (string.IsNullOrEmpty(deviceId) || string.IsNullOrEmpty(requestId)) {
-                Log.Error("invalid para");
-                return;
-            }
-
-            ResetDeviceSecretResponse rsp = JsonUtil.ConvertJsonStringToObject<ResetDeviceSecretResponse>(message.ToString());
-            if (rsp == null) {
-                Log.Warn("invalid response of resetting the device secret.");
-                return;
-            }
-
-            string newSecret = rsp.paras == null ? null : (string)rsp.paras["new_secret"];
-            if (string.IsNullOrEmpty(newSecret)) {
-                Log.Warn("new secret is null.");
-                return;
-            }
-            if (bridgeClient.resetDeviceSecretListener != null) {
-                bridgeClient.resetDeviceSecretListener.OnResetDeviceSecret(deviceId, requestId, rsp.resultCode, newSecret);
-            }
-
-            return;
-        }
-
-        public void OnMessagePublished(RawMessage message) { return; }
-        public void OnMessageUnPublished(RawMessage message) { return; }
     }
 }

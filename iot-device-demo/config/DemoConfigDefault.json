@@ -1,0 +1,10 @@
+{
+  "DemoName": "SmokeDetector",
+  "AuthConfig": {
+    "AuthUseCert": false,
+    "ServerAddress": "填入接入地址",
+    "ServerPort": 8883,
+    "DeviceId": "填入设备ID",
+    "DeviceSecret": "填入设备密钥"
+  }
+}

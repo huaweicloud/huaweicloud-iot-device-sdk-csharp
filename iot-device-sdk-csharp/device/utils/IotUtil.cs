@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2020-2022 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2020-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -63,12 +63,13 @@ namespace IoT.SDK.Device.Utils
                 }
                 else
                 {
-                    throw new InternalException(BaseExceptionEnum.BASE_TOPIC_INVALID_NO_REQUEST_ID, "topic is invalid, no request id.");
+                    throw new InternalException(BaseExceptionEnum.BASE_TOPIC_INVALID_NO_REQUEST_ID,
+                        "topic is invalid, no request id.");
                 }
             }
             catch (Exception ex)
             {
-                Log.Error("SDK.Error: Get request id failed, the topic is " + topic);
+                Log.Error(ex, "SDK.Error: Get request id failed, topic:{}", topic);
             }
 
             return requestId;
@@ -81,7 +82,7 @@ namespace IoT.SDK.Device.Utils
         /// <returns></returns>
         public static X509Certificate GetCert(string path)
         {
-            string certPath = GetRootDirectory() + path;
+            string certPath = Path.Join(GetRootDirectory(), path);
             X509Certificate2 crt = new X509Certificate2(certPath);
             return crt;
         }
@@ -123,7 +124,7 @@ namespace IoT.SDK.Device.Utils
         /// </summary>
         /// <param name="deviceId">Indicates the device ID.</param>
         /// <returns>Returns the node ID.</returns>
-        public static String GetNodeIdFromDeviceId(string deviceId)
+        public static string GetNodeIdFromDeviceId(string deviceId)
         {
             try
             {
@@ -131,7 +132,7 @@ namespace IoT.SDK.Device.Utils
             }
             catch (Exception ex)
             {
-                Log.Error("SDK.Error: get node id from device id failed, the device id is " + deviceId);
+                Log.Error(ex, "SDK.Error: get node id from device id failed, device id:{}", deviceId);
 
                 return null;
             }
@@ -149,34 +150,21 @@ namespace IoT.SDK.Device.Utils
         public static string ReadJsonFile(string path)
         {
             mutex.WaitOne();
-
-            StreamReader streamReader = null;
-
-            string content = string.Empty;
-
             try
             {
-                streamReader = new StreamReader(path);
-
-                content = streamReader.ReadToEnd();
-
-                streamReader.Close();
+                using var streamReader = new StreamReader(path);
+                return streamReader.ReadToEnd();
             }
             catch (Exception ex)
             {
-                Log.Error("read json file fail");
+                Log.Error(ex, "read json file fail");
             }
             finally
             {
-                if (streamReader != null)
-                {
-                    streamReader.Close();
-                }
-
                 mutex.ReleaseMutex();
             }
 
-            return content;
+            return string.Empty;
         }
 
         public static void WriteJsonFile(string path, string content)
@@ -184,11 +172,13 @@ namespace IoT.SDK.Device.Utils
             mutex.WaitOne();
             try
             {
-                File.WriteAllText(path, content);
+                var file = new FileInfo(path);
+                file.Directory?.Create();
+                File.WriteAllText(file.FullName, content);
             }
             catch (Exception ex)
             {
-                Log.Error("write json file fail");
+                Log.Error(ex, "write json file fail");
             }
             finally
             {
@@ -204,19 +194,29 @@ namespace IoT.SDK.Device.Utils
         public static string GetDeviceId(string topic)
         {
             string deviceId = string.Empty;
-            try {
-                if (!string.IsNullOrEmpty(topic) && topic.Contains("/devices/")) {
-                    string[] split = topic.Split(new string[] {"/devices/"}, StringSplitOptions.RemoveEmptyEntries);
+            try
+            {
+                if (!string.IsNullOrEmpty(topic) && topic.Contains("/devices/"))
+                {
+                    string[] split = topic.Split(new string[] { "/devices/" }, StringSplitOptions.RemoveEmptyEntries);
                     int length = split[1].IndexOf('/');
-                    if (length == 0) {
-                        throw new InternalException(BaseExceptionEnum.BASE_TOPIC_INVALID_NO_DEVICE_ID, "topic is invalid, no device id.");
+                    if (length == 0)
+                    {
+                        throw new InternalException(BaseExceptionEnum.BASE_TOPIC_INVALID_NO_DEVICE_ID,
+                            "topic is invalid, no device id.");
                     }
+
                     deviceId = split[1].Substring(0, length);
-                } else {
-                    throw new InternalException(BaseExceptionEnum.BASE_TOPIC_INVALID_NO_DEVICE_ID, "topic is invalid, no device id.");
                 }
-            } catch (Exception ex) {
-                Log.Error("SDK.Error: Get device id failed, the topic is " + topic);
+                else
+                {
+                    throw new InternalException(BaseExceptionEnum.BASE_TOPIC_INVALID_NO_DEVICE_ID,
+                        "topic is invalid, no device id.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "SDK.Error: Get device id failed, topic:{}", topic);
             }
 
             return deviceId;

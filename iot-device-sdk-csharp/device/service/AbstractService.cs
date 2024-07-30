@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (c) 2020-2020 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
+ * Copyright (c) 2020-2024 Huawei Cloud Computing Technology Co., Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -60,11 +60,21 @@ namespace IoT.SDK.Device.Service
 
         public AbstractDevice iotDevice { get; set; }
 
-        public string ServiceId { get; set; }
+        public string InnerServiceId { get; set; }
+
+        public virtual string GetServiceId()
+        {
+            return InnerServiceId;
+        }
+
+        public void GetShadow()
+        {
+            iotDevice.GetClient().GetShadow( new DeviceShadowRequest { ServiceId = GetServiceId() });
+        }
 
         public CommandRsp OnCommand(Command command)
         {
-            Dictionary<string, string> dic = new Dictionary<string, string>();
+            Dictionary<string, object> dic = new Dictionary<string, object>();
 
             if (!commands.ContainsKey(command.commandName))
             {
@@ -92,13 +102,14 @@ namespace IoT.SDK.Device.Service
                 MethodInfo nonstaticMethod = deviceServiceType.GetMethod(methodInfo.Name);
 
                 // Class instance required for non-static method calls.
-                object obj = nonstaticMethod.Invoke(deviceService, new string[] { JsonUtil.ConvertObjectToJsonString(command.paras) });
-                
+                object obj = nonstaticMethod.Invoke(deviceService,
+                    new object[] { JsonUtil.ConvertObjectToJsonString(command.paras) });
+
                 return (CommandRsp)obj;
             }
             catch (Exception e)
             {
-                Log.Error(e.Message);
+                Log.Error(e);
                 dic.Clear();
                 dic.Add("result", e.Message);
                 return new CommandRsp(CommandRsp.FAIL, dic);
@@ -118,7 +129,11 @@ namespace IoT.SDK.Device.Service
         {
             this.deviceService = deviceService;
             deviceServiceType = typeof(T); // Reflection object
-            var deviceServiceProperties = deviceServiceType.GetProperties(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance); // Obtains the device properties.
+            var deviceServiceProperties = deviceServiceType.GetProperties(BindingFlags.DeclaredOnly |
+                                                                          BindingFlags.Public | BindingFlags.NonPublic |
+                                                                          BindingFlags.Static |
+                                                                          BindingFlags
+                                                                              .Instance); // Obtains the device properties.
 
             foreach (PropertyInfo servicePro in deviceServiceProperties)
             {
@@ -145,11 +160,15 @@ namespace IoT.SDK.Device.Service
                 readableFields.Add(name, servicePro);
             }
 
-            MethodInfo[] deviceServiceMethods = deviceServiceType.GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance);
+            MethodInfo[] deviceServiceMethods = deviceServiceType.GetMethods(BindingFlags.DeclaredOnly |
+                                                                             BindingFlags.Public |
+                                                                             BindingFlags.NonPublic |
+                                                                             BindingFlags.Static |
+                                                                             BindingFlags.Instance);
             foreach (MethodInfo deviceServiceMethod in deviceServiceMethods)
             {
                 string name = deviceServiceMethod.Name;
-                
+
                 foreach (Attribute a in deviceServiceMethod.GetCustomAttributes(true))
                 {
                     if (name.Contains("get_") || name.Contains("set_"))
@@ -157,9 +176,9 @@ namespace IoT.SDK.Device.Service
                         continue;
                     }
 
-                    DeviceCommand deviceCommand = (DeviceCommand)a;
-                    if (deviceCommand != null)
+                    if (a is DeviceCommand)
                     {
+                        DeviceCommand deviceCommand = (DeviceCommand)a;
                         name = deviceCommand.Name;
                     }
                 }
@@ -189,7 +208,7 @@ namespace IoT.SDK.Device.Service
                         continue;
                     }
 
-                    object value = GetFiledValue(propertyName);
+                    object value = GetFieldValue(propertyName);
                     if (value != null)
                     {
                         ret.Add(propertyName, value);
@@ -202,7 +221,7 @@ namespace IoT.SDK.Device.Service
             // Reads all fields.
             foreach (KeyValuePair<string, PropertyInfo> kv in readableFields)
             {
-                object value = GetFiledValue(kv.Key);
+                object value = GetFieldValue(kv.Key);
                 if (value != null)
                 {
                     ret.Add(kv.Key, value);
@@ -218,7 +237,7 @@ namespace IoT.SDK.Device.Service
         /// </summary>
         /// <param name="properties">Indicates the desired properties.</param>
         /// <returns>Returns the operation result.</returns>
-        public IotResult OnWrite(Dictionary<string, object> properties)
+        public virtual IotResult OnWrite(Dictionary<string, object> properties)
         {
             List<string> changedProps = new List<string>();
 
@@ -245,7 +264,7 @@ namespace IoT.SDK.Device.Service
                     MethodInfo nonstaticMethod = commands[setter];
 
                     // Sets a value.
-                    if (SetFiledValue(nonstaticMethod, kv.Value) != 1)
+                    if (SetFeildValue(nonstaticMethod, kv.Value) != 1)
                     {
                         Log.Error("write property fail:" + propertyName);
                         continue;
@@ -256,7 +275,7 @@ namespace IoT.SDK.Device.Service
                 }
                 catch (Exception e)
                 {
-                    Log.Error(e.Message);
+                    Log.Error(e);
 
                     return new IotResult(-1, e.Message);
                 }
@@ -277,10 +296,10 @@ namespace IoT.SDK.Device.Service
         /// <param name="properties">Indicates the properties changed. If it is set to NULL, changes of all readable properties are reported.</param>
         public void FirePropertiesChanged(params string[] properties)
         {
-            iotDevice.FirePropertiesChanged(ServiceId, properties);
+            iotDevice.FirePropertiesChanged(GetServiceId(), properties);
         }
-        
-        public void EnableAutoReport(int reportInterval)
+
+        public void EnableAutoReport(int reportIntervalInMs)
         {
             if (timer != null)
             {
@@ -294,7 +313,7 @@ namespace IoT.SDK.Device.Service
                 timer = new Timer();
 
                 // Set the interval. The default value is 10 seconds.
-                timer.Interval = reportInterval;
+                timer.Interval = reportIntervalInMs;
 
                 // Allow the timer.
                 timer.Enabled = true;
@@ -324,11 +343,12 @@ namespace IoT.SDK.Device.Service
             FirePropertiesChanged();
         }
 
-        private int SetFiledValue(MethodInfo methodInfo, object value)
+        private int SetFeildValue(MethodInfo methodInfo, object value)
         {
             try
             {
-                ParameterInfo[] paramsInfo = methodInfo.GetParameters(); // Obtains parameters with the specified method.
+                ParameterInfo[]
+                    paramsInfo = methodInfo.GetParameters(); // Obtains parameters with the specified method.
                 object[] objValue = new object[paramsInfo.Length];
                 for (int i = 0; i < paramsInfo.Length; i++)
                 {
@@ -348,13 +368,13 @@ namespace IoT.SDK.Device.Service
             }
             catch (Exception e)
             {
-                Log.Error(e.Message);
+                Log.Error(e);
 
                 return -1;
             }
         }
 
-        private object GetFiledValue(string propertyName)
+        private object GetFieldValue(string propertyName)
         {
             try
             {
@@ -375,7 +395,7 @@ namespace IoT.SDK.Device.Service
             }
             catch (Exception e)
             {
-                Log.Error(e.Message);
+                Log.Error(e);
             }
 
             return null;
